@@ -21,7 +21,9 @@ chk.pack(pady=5)
 
 # Radio button1
 mode = tk.StringVar(value="simple")
-rb = tk.Radiobutton(root, text="Simple", variable=mode, value="simple")
-rb.pack(pady=5)
+rb1 = tk.Radiobutton(root, text="Simple", variable=mode, value="simple")
+rb2 = tk.Radiobutton(root, text="General", variable=mode, value="general")
+rb1.pack(pady=2)
+rb2.pack(pady=2)
 
 root.mainloop()
