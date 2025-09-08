@@ -14,8 +14,14 @@ canvas.pack()
 canvas.create_line(10, 0, 10, 120, fill="black", width=2)  # left line
 canvas.create_line(390, 0, 390, 120, fill="black", width=2)  # right line
 
+# Checkbox!
 checked = tk.BooleanVar(value=False)
-chk = tk.Checkbutton(root, text="Enable option", variable=checked)
+chk = tk.Checkbutton(root, text="Check me!", variable=checked)
 chk.pack(pady=5)
+
+# Radio button1
+mode = tk.StringVar(value="simple")
+rb = tk.Radiobutton(root, text="Simple", variable=mode, value="simple")
+rb.pack(pady=5)
 
 root.mainloop()
