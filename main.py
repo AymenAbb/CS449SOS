@@ -1,7 +1,11 @@
 import tkinter as tk
+from SOSGame import SOSGame
 
 root = tk.Tk()
 root.title("SOS Game")
+
+# Initialize game
+game = SOSGame()
 
 # Top frame
 top_frame = tk.Frame(root)
@@ -31,8 +35,33 @@ blue_letter = tk.StringVar(value='S')
 tk.Radiobutton(blue_frame, text="S", variable=blue_letter, value='S').pack()
 tk.Radiobutton(blue_frame, text="O", variable=blue_letter, value='O').pack()
 
-board_frame = tk.Frame(main_frame, bg='lightgray', width=300, height=300)
+board_frame = tk.Frame(main_frame, bg='white')
 board_frame.pack(side=tk.LEFT, padx=10)
+
+def cell_clicked(row, col): # Left click
+    current_player = game.current_player
+    
+    if current_player == SOSGame.BLUE:
+        letter = blue_letter.get()
+        color = 'blue'
+    else:
+        letter = red_letter.get()
+        color = 'red'
+    
+    if game.make_move(row, col, letter):
+        cell_buttons[row][col].config(text=letter, fg=color, state='disabled')
+        turn_label.config(text=f"Current turn: {game.current_player}")
+
+# Create board grid
+cell_buttons = []
+for row in range(game.board_size):
+    button_row = []
+    for col in range(game.board_size):
+        btn = tk.Button(board_frame, text='', width=3, height=1, font=('Arial', 12),
+                       command=lambda r=row, c=col: cell_clicked(r, c))
+        btn.grid(row=row, column=col, padx=1, pady=1)
+        button_row.append(btn)
+    cell_buttons.append(button_row)
 
 red_frame = tk.Frame(main_frame)
 red_frame.pack(side=tk.LEFT, padx=20)
@@ -45,12 +74,11 @@ tk.Radiobutton(red_frame, text="O", variable=red_letter, value='O').pack()
 bottom_frame = tk.Frame(root)
 bottom_frame.pack(pady=10)
 
-current_turn = "blue"
-turn_label = tk.Label(bottom_frame, text=f"Current turn: {current_turn}", font=('Arial', 12))
+turn_label = tk.Label(bottom_frame, text=f"Current turn: {game.current_player}", font=('Arial', 12))
 turn_label.pack(side=tk.LEFT, padx=20)
 
 def new_game():
-    print("New game clicked")  # Placeholder for now
+    print("New game clicked") # Placeholder for now
 
 tk.Button(bottom_frame, text="New Game", command=new_game, font=('Arial', 11)).pack(side=tk.LEFT)
 
