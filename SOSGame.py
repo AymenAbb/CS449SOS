@@ -60,3 +60,16 @@ class SOSGame:
     # Switch to other player.
     def _switch_player(self):
         self._current_player = self.RED if self._current_player == self.BLUE else self.BLUE
+
+    # Reset game with optional new settings
+    def reset_game(self, board_size=None, game_mode=None):
+        if board_size is not None:
+            if board_size < 3:
+                raise ValueError("Board size must be at least 3")
+            self._board_size = board_size
+        if game_mode is not None:
+            self._game_mode = game_mode
+    
+        self._board = [[self.EMPTY for _ in range(self._board_size)] 
+                   for _ in range(self._board_size)]
+        self._current_player = self.BLUE

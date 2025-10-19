@@ -38,7 +38,8 @@ tk.Radiobutton(blue_frame, text="O", variable=blue_letter, value='O').pack()
 board_frame = tk.Frame(main_frame, bg='white')
 board_frame.pack(side=tk.LEFT, padx=10)
 
-def cell_clicked(row, col): # Left click
+# Left click
+def cell_clicked(row, col): 
     current_player = game.current_player
     
     if current_player == SOSGame.BLUE:
@@ -77,8 +78,38 @@ bottom_frame.pack(pady=10)
 turn_label = tk.Label(bottom_frame, text=f"Current turn: {game.current_player}", font=('Arial', 12))
 turn_label.pack(side=tk.LEFT, padx=20)
 
+#Start new game with current settings.
 def new_game():
-    print("New game clicked") # Placeholder for now
+    try:
+        board_size = int(board_size_var.get())
+        if board_size < 3:
+            print("Board size must be at least 3")
+            return
+        
+        game_mode = mode.get()
+        game.reset_game(board_size=board_size, game_mode=game_mode)
+        create_board()
+        turn_label.config(text=f"Current turn: {game.current_player}")
+    except ValueError:
+        print("Invalid board size")
+
+# Create or recreate the board grid.
+def create_board():
+    for widget in board_frame.winfo_children():
+        widget.destroy()
+    
+    cell_buttons.clear()
+    size = game.board_size
+    
+    for row in range(size):
+        button_row = []
+        for col in range(size):
+            btn = tk.Button(board_frame, text='', width=3, height=1, 
+                          font=('Arial', max(10, 20 - size)),
+                          command=lambda r=row, c=col: cell_clicked(r, c))
+            btn.grid(row=row, column=col, padx=1, pady=1)
+            button_row.append(btn)
+        cell_buttons.append(button_row)
 
 tk.Button(bottom_frame, text="New Game", command=new_game, font=('Arial', 11)).pack(side=tk.LEFT)
 
