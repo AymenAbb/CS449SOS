@@ -1,29 +1,23 @@
 import tkinter as tk
 
 root = tk.Tk()
+root.title("SOS Game")
 
-root.geometry("500x500")
-root.title("Test")
+# Top frame for game settings
+top_frame = tk.Frame(root)
+top_frame.pack(pady=10)
 
-label = tk.Label(root, text="Hello World", font=("Arial", 18))
-label.pack()
+# SOS label
+tk.Label(top_frame, text="SOS", font=('Arial', 16, 'bold')).pack(side=tk.LEFT, padx=10)
 
-# lines!
-canvas = tk.Canvas(root, width=400, height=120)
-canvas.pack()
-canvas.create_line(10, 0, 10, 120, fill="black", width=2)  # left line
-canvas.create_line(390, 0, 390, 120, fill="black", width=2)  # right line
+# Game mode selection
+mode = tk.StringVar(value="Simple")
+tk.Radiobutton(top_frame, text="Simple game", variable=mode, value="Simple").pack(side=tk.LEFT)
+tk.Radiobutton(top_frame, text="General game", variable=mode, value="General").pack(side=tk.LEFT)
 
-# Checkbox!
-checked = tk.BooleanVar(value=False)
-chk = tk.Checkbutton(root, text="Check me!", variable=checked)
-chk.pack(pady=5)
-
-# Radio button1
-mode = tk.StringVar(value="simple")
-rb1 = tk.Radiobutton(root, text="Simple", variable=mode, value="simple")
-rb2 = tk.Radiobutton(root, text="General", variable=mode, value="general")
-rb1.pack(pady=2)
-rb2.pack(pady=2)
+# Board size
+tk.Label(top_frame, text="Board size").pack(side=tk.LEFT, padx=(20, 5))
+board_size_var = tk.StringVar(value='8')
+tk.Entry(top_frame, textvariable=board_size_var, width=5).pack(side=tk.LEFT)
 
 root.mainloop()
