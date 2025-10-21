@@ -1,116 +1,12 @@
 import tkinter as tk
-from SOSGame import SOSGame
+from SOSGUI import SOSGUI
 
-root = tk.Tk()
-root.title("SOS Game")
 
-# Initialize game
-game = SOSGame()
+def main():
+    root = tk.Tk()
+    app = SOSGUI(root)
+    root.mainloop()
 
-# Top frame
-top_frame = tk.Frame(root)
-top_frame.pack(pady=10)
 
-# SOS label
-tk.Label(top_frame, text="SOS", font=('Arial', 16, 'bold')).pack(side=tk.LEFT, padx=10)
-
-# Game mode selection
-mode = tk.StringVar(value="Simple")
-tk.Radiobutton(top_frame, text="Simple game", variable=mode, value="Simple").pack(side=tk.LEFT)
-tk.Radiobutton(top_frame, text="General game", variable=mode, value="General").pack(side=tk.LEFT)
-
-# Board size
-tk.Label(top_frame, text="Board size").pack(side=tk.LEFT, padx=(20, 5))
-board_size_var = tk.StringVar(value='8')
-tk.Entry(top_frame, textvariable=board_size_var, width=5).pack(side=tk.LEFT)
-
-# Main frame
-main_frame = tk.Frame(root)
-main_frame.pack(pady=10)
-
-blue_frame = tk.Frame(main_frame)
-blue_frame.pack(side=tk.LEFT, padx=20)
-tk.Label(blue_frame, text="Blue player", fg="blue", font=('Arial', 12, 'bold')).pack()
-blue_letter = tk.StringVar(value='S')
-tk.Radiobutton(blue_frame, text="S", variable=blue_letter, value='S').pack()
-tk.Radiobutton(blue_frame, text="O", variable=blue_letter, value='O').pack()
-
-board_frame = tk.Frame(main_frame, bg='white')
-board_frame.pack(side=tk.LEFT, padx=10)
-
-# Left click
-def cell_clicked(row, col): 
-    current_player = game.current_player
-    
-    if current_player == SOSGame.BLUE:
-        letter = blue_letter.get()
-        color = 'blue'
-    else:
-        letter = red_letter.get()
-        color = 'red'
-    
-    if game.make_move(row, col, letter):
-        cell_buttons[row][col].config(text=letter, fg=color, state='disabled')
-        turn_label.config(text=f"Current turn: {game.current_player}")
-
-# Create board grid
-cell_buttons = []
-for row in range(game.board_size):
-    button_row = []
-    for col in range(game.board_size):
-        btn = tk.Button(board_frame, text='', width=3, height=1, font=('Arial', 12),
-                       command=lambda r=row, c=col: cell_clicked(r, c))
-        btn.grid(row=row, column=col, padx=1, pady=1)
-        button_row.append(btn)
-    cell_buttons.append(button_row)
-
-red_frame = tk.Frame(main_frame)
-red_frame.pack(side=tk.LEFT, padx=20)
-tk.Label(red_frame, text="Red player", fg="red", font=('Arial', 12, 'bold')).pack()
-red_letter = tk.StringVar(value='S')
-tk.Radiobutton(red_frame, text="S", variable=red_letter, value='S').pack()
-tk.Radiobutton(red_frame, text="O", variable=red_letter, value='O').pack()
-
-# Bottom frame
-bottom_frame = tk.Frame(root)
-bottom_frame.pack(pady=10)
-
-turn_label = tk.Label(bottom_frame, text=f"Current turn: {game.current_player}", font=('Arial', 12))
-turn_label.pack(side=tk.LEFT, padx=20)
-
-#Start new game with current settings.
-def new_game():
-    try:
-        board_size = int(board_size_var.get())
-        if board_size < 3:
-            print("Board size must be at least 3")
-            return
-        
-        game_mode = mode.get()
-        game.reset_game(board_size=board_size, game_mode=game_mode)
-        create_board()
-        turn_label.config(text=f"Current turn: {game.current_player}")
-    except ValueError:
-        print("Invalid board size")
-
-# Create or recreate the board grid.
-def create_board():
-    for widget in board_frame.winfo_children():
-        widget.destroy()
-    
-    cell_buttons.clear()
-    size = game.board_size
-    
-    for row in range(size):
-        button_row = []
-        for col in range(size):
-            btn = tk.Button(board_frame, text='', width=3, height=1, 
-                          font=('Arial', max(10, 20 - size)),
-                          command=lambda r=row, c=col: cell_clicked(r, c))
-            btn.grid(row=row, column=col, padx=1, pady=1)
-            button_row.append(btn)
-        cell_buttons.append(button_row)
-
-tk.Button(bottom_frame, text="New Game", command=new_game, font=('Arial', 11)).pack(side=tk.LEFT)
-
-root.mainloop()
+if __name__ == "__main__":
+    main()
