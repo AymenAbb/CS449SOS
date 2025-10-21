@@ -68,5 +68,71 @@ class TestUserStory3_StartNewGame(unittest.TestCase):
         self.assertEqual(game.game_mode, SOSGame.GENERAL)
 
 
+class TestUserStory4_MakeMoveSimpleGame(unittest.TestCase):
+    def test_ac_4_1_valid_placement(self):
+        # Valid SOS placement, cell locks, turn alternates
+        game = SOSGame(board_size=3, game_mode=SOSGame.SIMPLE)
+
+        # Blue places S
+        self.assertEqual(game.current_player, SOSGame.BLUE)
+        result = game.make_move(0, 0, "S")
+        self.assertTrue(result)
+        self.assertEqual(game.get_cell(0, 0), "S")
+
+        self.assertEqual(game.current_player, SOSGame.RED)
+
+        # Red places O
+        result = game.make_move(1, 1, "O")
+        self.assertTrue(result)
+        self.assertEqual(game.get_cell(1, 1), "O")
+
+    # AC 4.2 here later
+
+    def test_ac_4_3_invalid_move_handling(self):
+        game = SOSGame(board_size=3, game_mode=SOSGame.SIMPLE)
+        game.make_move(1, 1, "S")
+
+        current = game.current_player
+
+        # On occupied cell
+        result = game.make_move(1, 1, "O")
+        self.assertFalse(result)
+        self.assertEqual(game.get_cell(1, 1), "S")
+        self.assertEqual(game.current_player, current)
+
+        # Out of bounds
+        result = game.make_move(5, 5, "S")
+        self.assertFalse(result)
+
+
+# User story 5 here later
+
+
+class TestUserStory6_MakeMoveGeneralGame(unittest.TestCase):
+    # AC 6.1 here later
+
+    def test_ac_6_2_invalid_move_handling(self):
+        game = SOSGame(board_size=4, game_mode=SOSGame.GENERAL)
+        game.make_move(2, 2, "S")
+
+        # On occupied cell
+        result = game.make_move(2, 2, "O")
+        self.assertFalse(result)
+
+        # Out of bounds
+        result = game.make_move(10, 10, "S")
+        self.assertFalse(result)
+
+    def test_ac_6_3_no_sos_alternates_turn(self):
+        game = SOSGame(board_size=4, game_mode=SOSGame.GENERAL)
+
+        self.assertEqual(game.current_player, SOSGame.BLUE)
+        game.make_move(0, 0, "S")
+        self.assertEqual(game.current_player, SOSGame.RED)
+
+        game.make_move(0, 1, "O")
+        self.assertEqual(game.current_player, SOSGame.BLUE)
+
+
 if __name__ == "__main__":
-    unittest.main(verbosity=1)
+    unittest.main(verbosity=2)
