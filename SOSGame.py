@@ -20,6 +20,8 @@ class SOSGame:
             [self.EMPTY for _ in range(board_size)] for _ in range(board_size)
         ]
         self._current_player = self.BLUE
+        self._blue_score = 0
+        self._red_score = 0
 
     @property
     def board_size(self):
@@ -28,6 +30,14 @@ class SOSGame:
     @property
     def current_player(self):
         return self._current_player
+
+    @property
+    def blue_score(self):
+        return self._blue_score
+
+    @property
+    def red_score(self):
+        return self._red_score
 
     # Get content of a cell.
     def get_cell(self, row, col):
@@ -60,6 +70,67 @@ class SOSGame:
             self.RED if self._current_player == self.BLUE else self.BLUE
         )
 
+    # Detect SOS sequences formed by placing a letter at (row, col)
+    def _detect_sos(self, row, col):
+        """
+        Check all 8 directions from (row, col) for SOS patterns.
+        Returns list of SOS sequences found.
+        Each sequence is a tuple: ((r1,c1), (r2,c2), (r3,c3))
+        """
+        sequences = []
+        letter = self._board[row][col]
+
+        directions = [
+            (0, 1),  # right
+            (0, -1),  # left
+            (1, 0),  # down
+            (-1, 0),  # up
+            (1, 1),  # diagonal down-right
+            (-1, -1),  # diagonal up-left
+            (-1, 1),  # diagonal up-right
+            (1, -1),  # diagonal down-left
+        ]
+
+        # Check if this S is the start of SOS
+        if letter == self.LETTER_S:
+            for dr, dc in directions:
+                r1, c1 = row + dr, col + dc
+                r2, c2 = row + 2 * dr, col + 2 * dc
+
+                if (
+                    0 <= r1 < self._board_size
+                    and 0 <= c1 < self._board_size
+                    and 0 <= r2 < self._board_size
+                    and 0 <= c2 < self._board_size
+                ):
+                    if (
+                        self._board[r1][c1] == self.LETTER_O
+                        and self._board[r2][c2] == self.LETTER_S
+                    ):
+                        sequences.append(((row, col), (r1, c1), (r2, c2)))
+
+        # Check if this O is the middle of SOS
+        elif letter == self.LETTER_O:
+            for dr, dc in directions:
+                r_before, c_before = row - dr, col - dc
+                r_after, c_after = row + dr, col + dc
+
+                if (
+                    0 <= r_before < self._board_size
+                    and 0 <= c_before < self._board_size
+                    and 0 <= r_after < self._board_size
+                    and 0 <= c_after < self._board_size
+                ):
+                    if (
+                        self._board[r_before][c_before] == self.LETTER_S
+                        and self._board[r_after][c_after] == self.LETTER_S
+                    ):
+                        sequences.append(
+                            ((r_before, c_before), (row, col), (r_after, c_after))
+                        )
+
+        return sequences
+
     # Reset game with optional new settings
     def reset_game(self, board_size=None):
         if board_size is not None:
@@ -72,6 +143,8 @@ class SOSGame:
             for _ in range(self._board_size)
         ]
         self._current_player = self.BLUE
+        self._blue_score = 0
+        self._red_score = 0
 
 
 # Simple game mode: first SOS wins.
