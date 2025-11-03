@@ -1,4 +1,3 @@
-# GUI for SOS game
 import tkinter as tk
 from tkinter import messagebox
 from SOSGame import SOSGame, SimpleGame, GeneralGame
@@ -48,6 +47,7 @@ class SOSGUI:
         main_frame = tk.Frame(self.root)
         main_frame.pack(pady=10)
 
+        # Blue player frame
         blue_frame = tk.Frame(main_frame)
         blue_frame.pack(side=tk.LEFT, padx=20)
         tk.Label(
@@ -60,9 +60,17 @@ class SOSGUI:
             blue_frame, text="O", variable=self.blue_letter, value="O"
         ).pack()
 
+        # Blue score label
+        self.blue_score_label = tk.Label(
+            blue_frame, text="Score: 0", font=("Arial", 10)
+        )
+        self.blue_score_label.pack(pady=(10, 0))
+
+        # Board frame
         self.board_frame = tk.Frame(main_frame, bg="white")
         self.board_frame.pack(side=tk.LEFT, padx=10)
 
+        # Red player frame
         red_frame = tk.Frame(main_frame)
         red_frame.pack(side=tk.LEFT, padx=20)
         tk.Label(
@@ -71,10 +79,15 @@ class SOSGUI:
         tk.Radiobutton(red_frame, text="S", variable=self.red_letter, value="S").pack()
         tk.Radiobutton(red_frame, text="O", variable=self.red_letter, value="O").pack()
 
+        # Red score label
+        self.red_score_label = tk.Label(red_frame, text="Score: 0", font=("Arial", 10))
+        self.red_score_label.pack(pady=(10, 0))
+
         # Bottom frame
         bottom_frame = tk.Frame(self.root)
         bottom_frame.pack(pady=10)
 
+        # Current turn label
         self.turn_label = tk.Label(
             bottom_frame,
             text=f"Current turn: {self.game.current_player}",
@@ -82,12 +95,16 @@ class SOSGUI:
         )
         self.turn_label.pack(side=tk.LEFT, padx=20)
 
+        # New Game button
         tk.Button(
             bottom_frame, text="New Game", command=self._new_game, font=("Arial", 11)
         ).pack(side=tk.LEFT)
 
     # Left click
     def _cell_clicked(self, row, col):
+        if self.game.game_over:
+            return
+
         current_player = self.game.current_player
 
         if current_player == SOSGame.BLUE:
@@ -99,10 +116,39 @@ class SOSGUI:
 
         if self.game.make_move(row, col, letter):
             self.cell_buttons[row][col].config(text=letter, fg=color, state="disabled")
-            self.turn_label.config(text=f"Current turn: {self.game.current_player}")
+
+            # Update scores
+            self._update_scores()
+
+            # Update turn label
+            if not self.game.game_over:
+                self.turn_label.config(text=f"Current turn: {self.game.current_player}")
+
+            # Check for game over
+            if self.game.game_over:
+                self._show_game_over()
         else:
             if self.game.get_cell(row, col) != SOSGame.EMPTY:
                 messagebox.showwarning("Invalid Move", "This cell is already occupied!")
+
+    # Update score labels
+    def _update_scores(self):
+        self.blue_score_label.config(text=f"Score: {self.game.blue_score}")
+        self.red_score_label.config(text=f"Score: {self.game.red_score}")
+
+    # Show game over message
+    def _show_game_over(self):
+        if self.game.winner is None:
+            message = "Game Over! It's a draw!"
+            self.turn_label.config(text="Game Over: Draw")
+        elif self.game.winner == SOSGame.BLUE:
+            message = f"Game Over! Blue wins with {self.game.blue_score} SOS!"
+            self.turn_label.config(text="Game Over: Blue wins!")
+        else:
+            message = f"Game Over! Red wins with {self.game.red_score} SOS!"
+            self.turn_label.config(text="Game Over: Red wins!")
+
+        messagebox.showinfo("Game Over", message)
 
     # Create or recreate the board grid.
     def _create_board(self):
@@ -147,6 +193,7 @@ class SOSGUI:
 
             self._create_board()
             self.turn_label.config(text=f"Current turn: {self.game.current_player}")
+            self._update_scores()
         except ValueError:
             messagebox.showerror(
                 "Invalid Input", "Please enter a valid integer for board size!"
