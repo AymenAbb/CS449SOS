@@ -22,6 +22,8 @@ class SOSGame:
         self._current_player = self.BLUE
         self._blue_score = 0
         self._red_score = 0
+        self._game_over = False
+        self._winner = None
 
     @property
     def board_size(self):
@@ -39,6 +41,14 @@ class SOSGame:
     def red_score(self):
         return self._red_score
 
+    @property
+    def game_over(self):
+        return self._game_over
+
+    @property
+    def winner(self):
+        return self._winner
+
     # Get content of a cell.
     def get_cell(self, row, col):
         if not (0 <= row < self._board_size and 0 <= col < self._board_size):
@@ -47,6 +57,9 @@ class SOSGame:
 
     # Place a letter on the board.
     def make_move(self, row, col, letter):
+        if self._game_over:
+            return False
+
         if not self._is_valid_move(row, col, letter):
             return False
 
@@ -70,25 +83,21 @@ class SOSGame:
             self.RED if self._current_player == self.BLUE else self.BLUE
         )
 
-    # Detect SOS sequences formed by placing a letter at (row, col)
+    # Detect SOS sequences formed by placing a letter at (row, col).
     def _detect_sos(self, row, col):
-        """
-        Check all 8 directions from (row, col) for SOS patterns.
-        Returns list of SOS sequences found.
-        Each sequence is a tuple: ((r1,c1), (r2,c2), (r3,c3))
-        """
         sequences = []
         letter = self._board[row][col]
 
+        # All 8 directions
         directions = [
-            (0, 1),  # right
-            (0, -1),  # left
-            (1, 0),  # down
-            (-1, 0),  # up
-            (1, 1),  # diagonal down-right
-            (-1, -1),  # diagonal up-left
-            (-1, 1),  # diagonal up-right
-            (1, -1),  # diagonal down-left
+            (0, 1),
+            (0, -1),
+            (1, 0),
+            (-1, 0),
+            (1, 1),
+            (-1, -1),
+            (-1, 1),
+            (1, -1),
         ]
 
         # Check if this S is the start of SOS
@@ -131,7 +140,15 @@ class SOSGame:
 
         return sequences
 
-    # Reset game with optional new settings
+    # Check if board is full.
+    def _is_board_full(self):
+        for row in range(self._board_size):
+            for col in range(self._board_size):
+                if self._board[row][col] == self.EMPTY:
+                    return False
+        return True
+
+    # Reset game with optional new settings.
     def reset_game(self, board_size=None):
         if board_size is not None:
             if board_size < 3:
@@ -145,6 +162,8 @@ class SOSGame:
         self._current_player = self.BLUE
         self._blue_score = 0
         self._red_score = 0
+        self._game_over = False
+        self._winner = None
 
 
 # Simple game mode: first SOS wins.
@@ -156,6 +175,44 @@ class SimpleGame(SOSGame):
     def game_mode(self):
         return self.SIMPLE
 
+    # Override make_move for simple game logic.
+    def make_move(self, row, col, letter):
+        if self._game_over:
+            return False
+
+        if not self._is_valid_move(row, col, letter):
+            return False
+
+        # Remember current player before switch
+        player_before_move = self._current_player
+
+        # Place the letter
+        self._board[row][col] = letter
+
+        # Check for SOS
+        sos_sequences = self._detect_sos(row, col)
+
+        # First SOS formed - game over, current player wins
+        if sos_sequences:
+            if player_before_move == self.BLUE:
+                self._blue_score += len(sos_sequences)
+            else:
+                self._red_score += len(sos_sequences)
+
+            self._game_over = True
+            self._winner = player_before_move
+
+        # Board full with no SOS - draw
+        elif self._is_board_full():
+            self._game_over = True
+            self._winner = None
+
+        # No SOS, switch player
+        else:
+            self._switch_player()
+
+        return True
+
 
 # General game mode: most SOSs wins.
 class GeneralGame(SOSGame):
@@ -165,3 +222,45 @@ class GeneralGame(SOSGame):
     @property
     def game_mode(self):
         return self.GENERAL
+
+    # Override make_move for general game logic.
+    def make_move(self, row, col, letter):
+        if self._game_over:
+            return False
+
+        if not self._is_valid_move(row, col, letter):
+            return False
+
+        # Remember current player before potential switch
+        player_before_move = self._current_player
+
+        # Place the letter
+        self._board[row][col] = letter
+
+        # Check for SOS
+        sos_sequences = self._detect_sos(row, col)
+
+        # SOS formed - add to score, player goes again
+        if sos_sequences:
+            if player_before_move == self.BLUE:
+                self._blue_score += len(sos_sequences)
+            else:
+                self._red_score += len(sos_sequences)
+
+        # Don't switch player - they get another turn
+        else:
+            # No SOS - switch player
+            self._switch_player()
+
+        # Check if board is full
+        if self._is_board_full():
+            self._game_over = True
+            # Determine winner by score
+            if self._blue_score > self._red_score:
+                self._winner = self.BLUE
+            elif self._red_score > self._blue_score:
+                self._winner = self.RED
+            else:
+                self._winner = None
+
+        return True
