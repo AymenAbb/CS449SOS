@@ -1,7 +1,7 @@
 # GUI for SOS game
 import tkinter as tk
 from tkinter import messagebox
-from SOSGame import SOSGame
+from SOSGame import SOSGame, SimpleGame, GeneralGame
 
 
 class SOSGUI:
@@ -10,7 +10,7 @@ class SOSGUI:
         self.root.title("SOS Game")
 
         # Initialize game
-        self.game = SOSGame()
+        self.game = SimpleGame()
 
         self.blue_letter = tk.StringVar(value="S")
         self.red_letter = tk.StringVar(value="S")
@@ -138,7 +138,13 @@ class SOSGUI:
                 return
 
             game_mode = self.mode.get()
-            self.game.reset_game(board_size=board_size, game_mode=game_mode)
+
+            # Create appropriate game subclass based on mode
+            if game_mode == "Simple":
+                self.game = SimpleGame(board_size=board_size)
+            else:
+                self.game = GeneralGame(board_size=board_size)
+
             self._create_board()
             self.turn_label.config(text=f"Current turn: {self.game.current_player}")
         except ValueError:

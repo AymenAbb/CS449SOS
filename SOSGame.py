@@ -1,6 +1,7 @@
 # Game logic for SOS game.
-class SOSGame:
 
+
+class SOSGame:
     EMPTY = ""
     LETTER_S = "S"
     LETTER_O = "O"
@@ -10,12 +11,11 @@ class SOSGame:
     GENERAL = "General"
 
     # Initialize game with board size and mode.
-    def __init__(self, board_size=8, game_mode=SIMPLE):
+    def __init__(self, board_size=8):
         if board_size < 3:
             raise ValueError("Board size must be at least 3")
 
         self._board_size = board_size
-        self._game_mode = game_mode
         self._board = [
             [self.EMPTY for _ in range(board_size)] for _ in range(board_size)
         ]
@@ -24,10 +24,6 @@ class SOSGame:
     @property
     def board_size(self):
         return self._board_size
-
-    @property
-    def game_mode(self):
-        return self._game_mode
 
     @property
     def current_player(self):
@@ -65,16 +61,34 @@ class SOSGame:
         )
 
     # Reset game with optional new settings
-    def reset_game(self, board_size=None, game_mode=None):
+    def reset_game(self, board_size=None):
         if board_size is not None:
             if board_size < 3:
                 raise ValueError("Board size must be at least 3")
             self._board_size = board_size
-        if game_mode is not None:
-            self._game_mode = game_mode
 
         self._board = [
             [self.EMPTY for _ in range(self._board_size)]
             for _ in range(self._board_size)
         ]
         self._current_player = self.BLUE
+
+
+# Simple game mode: first SOS wins.
+class SimpleGame(SOSGame):
+    def __init__(self, board_size=8):
+        super().__init__(board_size)
+
+    @property
+    def game_mode(self):
+        return self.SIMPLE
+
+
+# General game mode: most SOSs wins.
+class GeneralGame(SOSGame):
+    def __init__(self, board_size=8):
+        super().__init__(board_size)
+
+    @property
+    def game_mode(self):
+        return self.GENERAL
