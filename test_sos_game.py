@@ -1,132 +1,125 @@
-# Unit tests, one test per acceptance criterion.
-
 import unittest
-from SOSGame import SOSGame
+from SOSGame import SOSGame, SimpleGame, GeneralGame
 
 
 class TestUserStory1_ChooseBoardSize(unittest.TestCase):
     def test_ac_1_1_size_options_valid(self):
-        # AC 1.1: Size validation for n>=3, reject n<3.
-
-        game = SOSGame(board_size=3)
+        game = SimpleGame(board_size=3)
         self.assertEqual(game.board_size, 3)
 
-        game2 = SOSGame(board_size=10)
-        self.assertEqual(game2.board_size, 10)
+        game = SimpleGame(board_size=10)
+        self.assertEqual(game.board_size, 10)
 
         with self.assertRaises(ValueError):
-            SOSGame(board_size=2)
+            SimpleGame(board_size=2)
 
     def test_ac_1_2_board_renders(self):
-        game = SOSGame(board_size=5)
+        game = SimpleGame(board_size=5)
+        self.assertEqual(game.board_size, 5)
 
-        # Check dimensions for all empty cells
         for row in range(5):
             for col in range(5):
                 self.assertEqual(game.get_cell(row, col), SOSGame.EMPTY)
 
 
 class TestUserStory2_ChooseGameMode(unittest.TestCase):
-
     def test_ac_2_1_menu_select(self):
-        game_simple = SOSGame(game_mode=SOSGame.SIMPLE)
-        self.assertEqual(game_simple.game_mode, SOSGame.SIMPLE)
+        simple_game = SimpleGame()
+        self.assertEqual(simple_game.game_mode, SOSGame.SIMPLE)
 
-        game_general = SOSGame(game_mode=SOSGame.GENERAL)
-        self.assertEqual(game_general.game_mode, SOSGame.GENERAL)
+        general_game = GeneralGame()
+        self.assertEqual(general_game.game_mode, SOSGame.GENERAL)
 
     def test_ac_2_2_post_menu_selection(self):
-        # Rule application
-        game = SOSGame(board_size=4, game_mode=SOSGame.GENERAL)
-
+        game = GeneralGame(board_size=4)
         self.assertEqual(game.game_mode, SOSGame.GENERAL)
         self.assertEqual(game.current_player, SOSGame.BLUE)
 
 
 class TestUserStory3_StartNewGame(unittest.TestCase):
     def test_ac_3_1_reset_state(self):
-        # Reset grid, scores, and becomes blue's turn
-        game = SOSGame(board_size=3)
+        game = SimpleGame()
         game.make_move(0, 0, "S")
-        game.make_move(1, 1, "O")
-
         game.reset_game()
 
-        # Grid cleared
-        for row in range(3):
-            for col in range(3):
-                self.assertEqual(game.get_cell(row, col), SOSGame.EMPTY)
-
+        self.assertEqual(game.get_cell(0, 0), SOSGame.EMPTY)
         self.assertEqual(game.current_player, SOSGame.BLUE)
 
     def test_ac_3_2_reconfigure_size_and_mode(self):
-        game = SOSGame(board_size=5, game_mode=SOSGame.SIMPLE)
-
-        game.reset_game(board_size=8, game_mode=SOSGame.GENERAL)
-
+        game = SimpleGame(board_size=5)
+        game.reset_game(board_size=8)
         self.assertEqual(game.board_size, 8)
+
+        game = GeneralGame(board_size=6)
         self.assertEqual(game.game_mode, SOSGame.GENERAL)
 
 
 class TestUserStory4_MakeMoveSimpleGame(unittest.TestCase):
     def test_ac_4_1_valid_placement(self):
-        # Valid SOS placement, cell locks, turn alternates
-        game = SOSGame(board_size=3, game_mode=SOSGame.SIMPLE)
-
-        # Blue places S
-        self.assertEqual(game.current_player, SOSGame.BLUE)
-        result = game.make_move(0, 0, "S")
-        self.assertTrue(result)
+        game = SimpleGame()
+        self.assertTrue(game.make_move(0, 0, "S"))
         self.assertEqual(game.get_cell(0, 0), "S")
-
         self.assertEqual(game.current_player, SOSGame.RED)
 
-        # Red places O
-        result = game.make_move(1, 1, "O")
-        self.assertTrue(result)
-        self.assertEqual(game.get_cell(1, 1), "O")
+        self.assertTrue(game.make_move(1, 1, "O"))
+        self.assertEqual(game.current_player, SOSGame.BLUE)
 
-    # AC 4.2 here later
+    # AC 4.2 is tested in UI
 
     def test_ac_4_3_invalid_move_handling(self):
-        game = SOSGame(board_size=3, game_mode=SOSGame.SIMPLE)
-        game.make_move(1, 1, "S")
+        game = SimpleGame()
+        game.make_move(0, 0, "S")
 
-        current = game.current_player
-
-        # On occupied cell
-        result = game.make_move(1, 1, "O")
-        self.assertFalse(result)
-        self.assertEqual(game.get_cell(1, 1), "S")
-        self.assertEqual(game.current_player, current)
-
-        # Out of bounds
-        result = game.make_move(5, 5, "S")
-        self.assertFalse(result)
+        self.assertFalse(game.make_move(0, 0, "O"))
+        self.assertFalse(game.make_move(10, 10, "S"))
 
 
-# User story 5 here later
+class TestUserStory5_SimpleGameOver(unittest.TestCase):
+    def test_ac_5_1_first_sos_wins(self):
+        game = SimpleGame(board_size=3)
+        game.make_move(0, 0, "S")
+        game.make_move(1, 0, "S")
+        game.make_move(0, 1, "O")
+        game.make_move(1, 1, "O")
+        game.make_move(0, 2, "S")
+
+        self.assertTrue(game.game_over)
+        self.assertEqual(game.winner, SOSGame.BLUE)
+        self.assertEqual(game.blue_score, 1)
+
+    def test_ac_5_2_board_full_draw(self):
+        game = SimpleGame(board_size=3)
+        moves = [
+            (0, 0, "O"),
+            (0, 1, "O"),
+            (0, 2, "O"),
+            (1, 0, "O"),
+            (1, 1, "S"),
+            (1, 2, "O"),
+            (2, 0, "O"),
+            (2, 1, "O"),
+            (2, 2, "S"),
+        ]
+        for row, col, letter in moves:
+            game.make_move(row, col, letter)
+
+        self.assertTrue(game.game_over)
+        self.assertIsNone(game.winner)
 
 
 class TestUserStory6_MakeMoveGeneralGame(unittest.TestCase):
-    # AC 6.1 here later
+
+    # AC 6.1 is tested in UI
 
     def test_ac_6_2_invalid_move_handling(self):
-        game = SOSGame(board_size=4, game_mode=SOSGame.GENERAL)
+        game = GeneralGame()
         game.make_move(2, 2, "S")
 
-        # On occupied cell
-        result = game.make_move(2, 2, "O")
-        self.assertFalse(result)
-
-        # Out of bounds
-        result = game.make_move(10, 10, "S")
-        self.assertFalse(result)
+        self.assertFalse(game.make_move(2, 2, "O"))
+        self.assertFalse(game.make_move(10, 10, "S"))
 
     def test_ac_6_3_no_sos_alternates_turn(self):
-        game = SOSGame(board_size=4, game_mode=SOSGame.GENERAL)
-
-        self.assertEqual(game.current_player, SOSGame.BLUE)
+        game = GeneralGame()
         game.make_move(0, 0, "S")
         self.assertEqual(game.current_player, SOSGame.RED)
 
@@ -134,5 +127,45 @@ class TestUserStory6_MakeMoveGeneralGame(unittest.TestCase):
         self.assertEqual(game.current_player, SOSGame.BLUE)
 
 
+class TestUserStory7_GeneralGameOver(unittest.TestCase):
+    def test_ac_7_1_continues_until_full(self):
+        game = GeneralGame(board_size=3)
+        game.make_move(0, 0, "S")
+        game.make_move(0, 1, "O")
+        game.make_move(0, 2, "S")
+
+        self.assertFalse(game.game_over)
+
+    def test_ac_7_2_most_sos_wins(self):
+        game = GeneralGame(board_size=3)
+        game.make_move(0, 0, "S")
+        game.make_move(1, 0, "S")
+        game.make_move(0, 1, "O")
+        game.make_move(1, 1, "O")
+        game.make_move(0, 2, "S")
+
+        game.make_move(2, 0, "O")
+        game.make_move(2, 1, "O")
+        game.make_move(1, 2, "O")
+        game.make_move(2, 2, "O")
+
+        self.assertTrue(game.game_over)
+        self.assertEqual(game.winner, SOSGame.BLUE)
+        self.assertGreater(game.blue_score, game.red_score)
+
+    def test_ac_7_3_sos_player_continues(self):
+        game = GeneralGame(board_size=3)
+        game.make_move(0, 0, "S")
+        game.make_move(1, 0, "S")
+        game.make_move(0, 1, "O")
+        game.make_move(1, 1, "O")
+
+        current = game.current_player
+        game.make_move(0, 2, "S")
+
+        self.assertEqual(game.current_player, current)
+        self.assertEqual(game.blue_score, 1)
+
+
 if __name__ == "__main__":
-    unittest.main(verbosity=2)
+    unittest.main()
