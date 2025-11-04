@@ -66,8 +66,8 @@ class SOSGUI:
         )
         self.blue_score_label.pack(pady=(10, 0))
 
-        # Board frame
-        self.board_frame = tk.Frame(main_frame, bg="white")
+        # Board frame with canvas
+        self.board_frame = tk.Frame(main_frame)
         self.board_frame.pack(side=tk.LEFT, padx=10)
 
         # Red player frame
@@ -105,17 +105,25 @@ class SOSGUI:
         if self.game.game_over:
             return
 
-        current_player = self.game.current_player
+        # Capture the player BEFORE the move
+        player_making_move = self.game.current_player
 
-        if current_player == SOSGame.BLUE:
+        if player_making_move == SOSGame.BLUE:
             letter = self.blue_letter.get()
             color = "blue"
         else:
             letter = self.red_letter.get()
             color = "red"
 
+        # Attempt to make the move
         if self.game.make_move(row, col, letter):
-            self.cell_buttons[row][col].config(text=letter, fg=color, state="disabled")
+            # Set button text in the color of the player who MADE the move
+            self.cell_buttons[row][col].config(
+                text=letter, fg=color, disabledforeground=color, state="disabled"
+            )
+
+            # Draw SOS lines
+            self._draw_sos_lines()
 
             # Update scores
             self._update_scores()
@@ -130,6 +138,30 @@ class SOSGUI:
         else:
             if self.game.get_cell(row, col) != SOSGame.EMPTY:
                 messagebox.showwarning("Invalid Move", "This cell is already occupied!")
+
+    # Draw lines through SOS sequences
+    def _draw_sos_lines(self):
+        # Clear existing lines
+        self.canvas.delete("sos_line")
+
+        for line_data in self.game.sos_lines:
+            seq, player = line_data
+            start_cell, mid_cell, end_cell = seq
+
+            # Calculate center coordinates
+            start_row, start_col = start_cell
+            end_row, end_col = end_cell
+
+            cell_size = self.cell_size
+            x1 = start_col * cell_size + cell_size // 2
+            y1 = start_row * cell_size + cell_size // 2
+            x2 = end_col * cell_size + cell_size // 2
+            y2 = end_row * cell_size + cell_size // 2
+
+            color = "blue" if player == SOSGame.BLUE else "red"
+            self.canvas.create_line(
+                x1, y1, x2, y2, fill=color, width=3, tags="sos_line"
+            )
 
     # Update score labels
     def _update_scores(self):
@@ -155,21 +187,36 @@ class SOSGUI:
         for widget in self.board_frame.winfo_children():
             widget.destroy()
 
-        self.cell_buttons = []
         size = self.game.board_size
+        self.cell_size = max(40, 400 // size)
+
+        # Create canvas for drawing lines
+        canvas_size = size * self.cell_size
+        self.canvas = tk.Canvas(
+            self.board_frame, width=canvas_size, height=canvas_size, bg="white"
+        )
+        self.canvas.pack()
+
+        self.cell_buttons = []
 
         for row in range(size):
             button_row = []
             for col in range(size):
+                x = col * self.cell_size
+                y = row * self.cell_size
+
+                # Create button on canvas
                 btn = tk.Button(
-                    self.board_frame,
+                    self.canvas,
                     text="",
                     width=3,
                     height=1,
                     font=("Arial", max(10, 20 - size)),
                     command=lambda r=row, c=col: self._cell_clicked(r, c),
                 )
-                btn.grid(row=row, column=col, padx=1, pady=1)
+                self.canvas.create_window(
+                    x + self.cell_size // 2, y + self.cell_size // 2, window=btn
+                )
                 button_row.append(btn)
             self.cell_buttons.append(button_row)
 

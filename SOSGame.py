@@ -24,6 +24,7 @@ class SOSGame:
         self._red_score = 0
         self._game_over = False
         self._winner = None
+        self._sos_lines = []
 
     @property
     def board_size(self):
@@ -48,6 +49,10 @@ class SOSGame:
     @property
     def winner(self):
         return self._winner
+
+    @property
+    def sos_lines(self):
+        return self._sos_lines
 
     # Get content of a cell.
     def get_cell(self, row, col):
@@ -164,6 +169,7 @@ class SOSGame:
         self._red_score = 0
         self._game_over = False
         self._winner = None
+        self._sos_lines = []
 
 
 # Simple game mode: first SOS wins.
@@ -199,11 +205,15 @@ class SimpleGame(SOSGame):
             else:
                 self._red_score += len(sos_sequences)
 
+            for seq in sos_sequences:
+                self._sos_lines.append((seq, player_before_move))
+
             self._game_over = True
             self._winner = player_before_move
 
         # Board full with no SOS - draw
         elif self._is_board_full():
+
             self._game_over = True
             self._winner = None
 
@@ -247,9 +257,11 @@ class GeneralGame(SOSGame):
             else:
                 self._red_score += len(sos_sequences)
 
-        # Don't switch player - they get another turn
+            for seq in sos_sequences:
+                self._sos_lines.append((seq, player_before_move))
+
+            # Don't switch player - they get another turn
         else:
-            # No SOS - switch player
             self._switch_player()
 
         # Check if board is full
