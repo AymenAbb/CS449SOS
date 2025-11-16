@@ -2,6 +2,7 @@
 
 
 class SOSGame:
+
     EMPTY = ""
     LETTER_S = "S"
     LETTER_O = "O"
@@ -11,7 +12,7 @@ class SOSGame:
     GENERAL = "General"
 
     # Initialize game with board size and mode.
-    def __init__(self, board_size=8):
+    def __init__(self, board_size=8, blue_player=None, red_player=None):
         if board_size < 3:
             raise ValueError("Board size must be at least 3")
 
@@ -25,6 +26,8 @@ class SOSGame:
         self._game_over = False
         self._winner = None
         self._sos_lines = []
+        self._blue_player = blue_player
+        self._red_player = red_player
 
     @property
     def board_size(self):
@@ -53,6 +56,11 @@ class SOSGame:
     @property
     def sos_lines(self):
         return self._sos_lines
+
+    def get_current_player_object(self):
+        return (
+            self._blue_player if self._current_player == self.BLUE else self._red_player
+        )
 
     # Get content of a cell.
     def get_cell(self, row, col):
@@ -154,7 +162,7 @@ class SOSGame:
         return True
 
     # Reset game with optional new settings.
-    def reset_game(self, board_size=None):
+    def reset_game(self, board_size=None, blue_player=None, red_player=None):
         if board_size is not None:
             if board_size < 3:
                 raise ValueError("Board size must be at least 3")
@@ -171,11 +179,16 @@ class SOSGame:
         self._winner = None
         self._sos_lines = []
 
+        if blue_player is not None:
+            self._blue_player = blue_player
+        if red_player is not None:
+            self._red_player = red_player
+
 
 # Simple game mode: first SOS wins.
 class SimpleGame(SOSGame):
-    def __init__(self, board_size=8):
-        super().__init__(board_size)
+    def __init__(self, board_size=8, blue_player=None, red_player=None):
+        super().__init__(board_size, blue_player, red_player)
 
     @property
     def game_mode(self):
@@ -213,11 +226,8 @@ class SimpleGame(SOSGame):
 
         # Board full with no SOS - draw
         elif self._is_board_full():
-
             self._game_over = True
             self._winner = None
-
-        # No SOS, switch player
         else:
             self._switch_player()
 
@@ -226,8 +236,8 @@ class SimpleGame(SOSGame):
 
 # General game mode: most SOSs wins.
 class GeneralGame(SOSGame):
-    def __init__(self, board_size=8):
-        super().__init__(board_size)
+    def __init__(self, board_size=8, blue_player=None, red_player=None):
+        super().__init__(board_size, blue_player, red_player)
 
     @property
     def game_mode(self):
@@ -267,6 +277,7 @@ class GeneralGame(SOSGame):
         # Check if board is full
         if self._is_board_full():
             self._game_over = True
+
             # Determine winner by score
             if self._blue_score > self._red_score:
                 self._winner = self.BLUE

@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 from SOSGame import SOSGame, SimpleGame, GeneralGame
+from player import HumanPlayer, ComputerPlayer
 
 
 class SOSGUI:
@@ -15,6 +16,8 @@ class SOSGUI:
         self.red_letter = tk.StringVar(value="S")
         self.board_size_var = tk.StringVar(value="8")
         self.mode = tk.StringVar(value="Simple")
+        self.blue_player_type = tk.StringVar(value="Human")
+        self.red_player_type = tk.StringVar(value="Human")
 
         self._create_widgets()
         self._create_board()
@@ -59,6 +62,15 @@ class SOSGUI:
         tk.Radiobutton(
             blue_frame, text="O", variable=self.blue_letter, value="O"
         ).pack()
+        tk.Radiobutton(
+            blue_frame, text="Human", variable=self.blue_player_type, value="Human"
+        ).pack()
+        tk.Radiobutton(
+            blue_frame,
+            text="Computer",
+            variable=self.blue_player_type,
+            value="Computer",
+        ).pack()
 
         # Blue score label
         self.blue_score_label = tk.Label(
@@ -78,6 +90,12 @@ class SOSGUI:
         ).pack()
         tk.Radiobutton(red_frame, text="S", variable=self.red_letter, value="S").pack()
         tk.Radiobutton(red_frame, text="O", variable=self.red_letter, value="O").pack()
+        tk.Radiobutton(
+            red_frame, text="Human", variable=self.red_player_type, value="Human"
+        ).pack()
+        tk.Radiobutton(
+            red_frame, text="Computer", variable=self.red_player_type, value="Computer"
+        ).pack()
 
         # Red score label
         self.red_score_label = tk.Label(red_frame, text="Score: 0", font=("Arial", 10))
@@ -103,6 +121,10 @@ class SOSGUI:
     # Left click
     def _cell_clicked(self, row, col):
         if self.game.game_over:
+            return
+
+        player = self.game.get_current_player_object()
+        if isinstance(player, ComputerPlayer):
             return
 
         # Capture the player BEFORE the move
@@ -131,13 +153,45 @@ class SOSGUI:
             # Update turn label
             if not self.game.game_over:
                 self.turn_label.config(text=f"Current turn: {self.game.current_player}")
-
-            # Check for game over
-            if self.game.game_over:
+                self._check_computer_turn()
+            else:
                 self._show_game_over()
         else:
             if self.game.get_cell(row, col) != SOSGame.EMPTY:
                 messagebox.showwarning("Invalid Move", "This cell is already occupied!")
+
+    def _check_computer_turn(self):
+        if not self.game.game_over:
+            player = self.game.get_current_player_object()
+            if isinstance(player, ComputerPlayer):
+                self.root.after(500, self._make_computer_move)
+
+    def _make_computer_move(self):
+        player = self.game.get_current_player_object()
+
+        if isinstance(player, ComputerPlayer):
+            move = player.get_move(self.game)
+            if move:
+                row, col, letter = move
+                color = "blue" if self.game.current_player == SOSGame.BLUE else "red"
+
+                if self.game.make_move(row, col, letter):
+                    self.cell_buttons[row][col].config(
+                        text=letter,
+                        fg=color,
+                        disabledforeground=color,
+                        state="disabled",
+                    )
+                    self._draw_sos_lines()
+                    self._update_scores()
+
+                    if not self.game.game_over:
+                        self.turn_label.config(
+                            text=f"Current turn: {self.game.current_player}"
+                        )
+                        self._check_computer_turn()
+                    else:
+                        self._show_game_over()
 
     # Draw lines through SOS sequences
     def _draw_sos_lines(self):
@@ -232,15 +286,35 @@ class SOSGUI:
 
             game_mode = self.mode.get()
 
+            blue_player = (
+                HumanPlayer("blue")
+                if self.blue_player_type.get() == "Human"
+                else ComputerPlayer("blue")
+            )
+            red_player = (
+                HumanPlayer("red")
+                if self.red_player_type.get() == "Human"
+                else ComputerPlayer("red")
+            )
+
             # Create appropriate game subclass based on mode
             if game_mode == "Simple":
-                self.game = SimpleGame(board_size=board_size)
+                self.game = SimpleGame(
+                    board_size=board_size,
+                    blue_player=blue_player,
+                    red_player=red_player,
+                )
             else:
-                self.game = GeneralGame(board_size=board_size)
+                self.game = GeneralGame(
+                    board_size=board_size,
+                    blue_player=blue_player,
+                    red_player=red_player,
+                )
 
             self._create_board()
             self.turn_label.config(text=f"Current turn: {self.game.current_player}")
             self._update_scores()
+            self._check_computer_turn()
         except ValueError:
             messagebox.showerror(
                 "Invalid Input", "Please enter a valid integer for board size!"
