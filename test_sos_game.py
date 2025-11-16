@@ -55,7 +55,7 @@ class TestUserStory3_StartNewGame(unittest.TestCase):
 
 
 class TestUserStory4_MakeMoveSimpleGame(unittest.TestCase):
-    def test_ac_4_1_valid_placement(self):
+    def test_ac_4_1_valid_placement(self):  # Simple game unit test
         game = SimpleGame()
         self.assertTrue(game.make_move(0, 0, "S"))
         self.assertEqual(game.get_cell(0, 0), "S")
@@ -66,7 +66,7 @@ class TestUserStory4_MakeMoveSimpleGame(unittest.TestCase):
 
     # AC 4.2 is tested in UI
 
-    def test_ac_4_3_invalid_move_handling(self):
+    def test_ac_4_3_invalid_move_handling(self):  # Simple game unit test
         game = SimpleGame()
         game.make_move(0, 0, "S")
 
@@ -75,7 +75,7 @@ class TestUserStory4_MakeMoveSimpleGame(unittest.TestCase):
 
 
 class TestUserStory5_SimpleGameOver(unittest.TestCase):
-    def test_ac_5_1_first_sos_wins(self):
+    def test_ac_5_1_first_sos_wins(self):  # Simple game unit test
         game = SimpleGame(board_size=3)
         game.make_move(0, 0, "S")
         game.make_move(1, 0, "S")
@@ -87,7 +87,7 @@ class TestUserStory5_SimpleGameOver(unittest.TestCase):
         self.assertEqual(game.winner, SOSGame.BLUE)
         self.assertEqual(game.blue_score, 1)
 
-    def test_ac_5_2_board_full_draw(self):
+    def test_ac_5_2_board_full_draw(self):  # Simple game unit test
         game = SimpleGame(board_size=3)
         moves = [
             (0, 0, "O"),
@@ -111,14 +111,14 @@ class TestUserStory6_MakeMoveGeneralGame(unittest.TestCase):
 
     # AC 6.1 is tested in UI
 
-    def test_ac_6_2_invalid_move_handling(self):
+    def test_ac_6_2_invalid_move_handling(self):  # General game unit test
         game = GeneralGame()
         game.make_move(2, 2, "S")
 
         self.assertFalse(game.make_move(2, 2, "O"))
         self.assertFalse(game.make_move(10, 10, "S"))
 
-    def test_ac_6_3_no_sos_alternates_turn(self):
+    def test_ac_6_3_no_sos_alternates_turn(self):  # General game unit test
         game = GeneralGame()
         game.make_move(0, 0, "S")
         self.assertEqual(game.current_player, SOSGame.RED)
@@ -128,7 +128,7 @@ class TestUserStory6_MakeMoveGeneralGame(unittest.TestCase):
 
 
 class TestUserStory7_GeneralGameOver(unittest.TestCase):
-    def test_ac_7_1_continues_until_full(self):
+    def test_ac_7_1_continues_until_full(self):  # General game unit test
         game = GeneralGame(board_size=3)
         game.make_move(0, 0, "S")
         game.make_move(0, 1, "O")
@@ -136,7 +136,7 @@ class TestUserStory7_GeneralGameOver(unittest.TestCase):
 
         self.assertFalse(game.game_over)
 
-    def test_ac_7_2_most_sos_wins(self):
+    def test_ac_7_2_most_sos_wins(self):  # General game unit test
         game = GeneralGame(board_size=3)
         game.make_move(0, 0, "S")
         game.make_move(1, 0, "S")
@@ -153,7 +153,7 @@ class TestUserStory7_GeneralGameOver(unittest.TestCase):
         self.assertEqual(game.winner, SOSGame.BLUE)
         self.assertGreater(game.blue_score, game.red_score)
 
-    def test_ac_7_3_sos_player_continues(self):
+    def test_ac_7_3_sos_player_continues(self):  # General game unit test
         game = GeneralGame(board_size=3)
         game.make_move(0, 0, "S")
         game.make_move(1, 0, "S")
