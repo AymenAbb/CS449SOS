@@ -11,7 +11,6 @@ class SOSGUI:
 
         # Initialize game
         self.game = SimpleGame()
-
         self.blue_letter = tk.StringVar(value="S")
         self.red_letter = tk.StringVar(value="S")
         self.board_size_var = tk.StringVar(value="8")
@@ -23,7 +22,12 @@ class SOSGUI:
         self._create_board()
 
     def _create_widgets(self):
-        # Top frame
+        self._create_top_frame()
+        self._create_main_frame()
+        self._create_bottom_frame()
+
+    # Create top frame with game mode and board size controls.
+    def _create_top_frame(self):
         top_frame = tk.Frame(self.root)
         top_frame.pack(pady=10)
 
@@ -46,62 +50,52 @@ class SOSGUI:
             side=tk.LEFT
         )
 
-        # Main frame
+    # Create main frame with player controls and board.
+    def _create_main_frame(self):
         main_frame = tk.Frame(self.root)
         main_frame.pack(pady=10)
 
         # Blue player frame
-        blue_frame = tk.Frame(main_frame)
-        blue_frame.pack(side=tk.LEFT, padx=20)
-        tk.Label(
-            blue_frame, text="Blue player", fg="blue", font=("Arial", 12, "bold")
-        ).pack()
-        tk.Radiobutton(
-            blue_frame, text="S", variable=self.blue_letter, value="S"
-        ).pack()
-        tk.Radiobutton(
-            blue_frame, text="O", variable=self.blue_letter, value="O"
-        ).pack()
-        tk.Radiobutton(
-            blue_frame, text="Human", variable=self.blue_player_type, value="Human"
-        ).pack()
-        tk.Radiobutton(
-            blue_frame,
-            text="Computer",
-            variable=self.blue_player_type,
-            value="Computer",
-        ).pack()
-
-        # Blue score label
-        self.blue_score_label = tk.Label(
-            blue_frame, text="Score: 0", font=("Arial", 10)
+        self.blue_score_label = self._create_player_frame(
+            main_frame, "Blue player", "blue", self.blue_letter, self.blue_player_type
         )
-        self.blue_score_label.pack(pady=(10, 0))
 
-        # Board frame with canvas
+        # Board frame
         self.board_frame = tk.Frame(main_frame)
         self.board_frame.pack(side=tk.LEFT, padx=10)
 
         # Red player frame
-        red_frame = tk.Frame(main_frame)
-        red_frame.pack(side=tk.LEFT, padx=20)
+        self.red_score_label = self._create_player_frame(
+            main_frame, "Red player", "red", self.red_letter, self.red_player_type
+        )
+
+    # Create a player frame with letter and player type controls.
+    def _create_player_frame(self, parent, label_text, color, letter_var, player_type_var):
+        frame = tk.Frame(parent)
+        frame.pack(side=tk.LEFT, padx=20)
+
         tk.Label(
-            red_frame, text="Red player", fg="red", font=("Arial", 12, "bold")
-        ).pack()
-        tk.Radiobutton(red_frame, text="S", variable=self.red_letter, value="S").pack()
-        tk.Radiobutton(red_frame, text="O", variable=self.red_letter, value="O").pack()
-        tk.Radiobutton(
-            red_frame, text="Human", variable=self.red_player_type, value="Human"
-        ).pack()
-        tk.Radiobutton(
-            red_frame, text="Computer", variable=self.red_player_type, value="Computer"
+            frame, text=label_text, fg=color, font=("Arial", 12, "bold")
         ).pack()
 
-        # Red score label
-        self.red_score_label = tk.Label(red_frame, text="Score: 0", font=("Arial", 10))
-        self.red_score_label.pack(pady=(10, 0))
+        tk.Radiobutton(frame, text="S", variable=letter_var, value="S").pack()
+        tk.Radiobutton(frame, text="O", variable=letter_var, value="O").pack()
 
-        # Bottom frame
+        tk.Radiobutton(
+            frame, text="Human", variable=player_type_var, value="Human"
+        ).pack()
+        tk.Radiobutton(
+            frame, text="Computer", variable=player_type_var, value="Computer"
+        ).pack()
+
+        # Score label
+        score_label = tk.Label(frame, text="Score: 0", font=("Arial", 10))
+        score_label.pack(pady=(10, 0))
+
+        return score_label
+
+    # Create bottom frame with turn label and buttons.
+    def _create_bottom_frame(self):
         bottom_frame = tk.Frame(self.root)
         bottom_frame.pack(pady=10)
 
@@ -129,7 +123,6 @@ class SOSGUI:
 
         # Capture the player BEFORE the move
         player_making_move = self.game.current_player
-
         if player_making_move == SOSGame.BLUE:
             letter = self.blue_letter.get()
             color = "blue"
@@ -168,7 +161,6 @@ class SOSGUI:
 
     def _make_computer_move(self):
         player = self.game.get_current_player_object()
-
         if isinstance(player, ComputerPlayer):
             move = player.get_move(self.game)
             if move:
@@ -205,8 +197,8 @@ class SOSGUI:
             # Calculate center coordinates
             start_row, start_col = start_cell
             end_row, end_col = end_cell
-
             cell_size = self.cell_size
+
             x1 = start_col * cell_size + cell_size // 2
             y1 = start_row * cell_size + cell_size // 2
             x2 = end_col * cell_size + cell_size // 2
@@ -252,7 +244,6 @@ class SOSGUI:
         self.canvas.pack()
 
         self.cell_buttons = []
-
         for row in range(size):
             button_row = []
             for col in range(size):
@@ -315,6 +306,7 @@ class SOSGUI:
             self.turn_label.config(text=f"Current turn: {self.game.current_player}")
             self._update_scores()
             self._check_computer_turn()
+
         except ValueError:
             messagebox.showerror(
                 "Invalid Input", "Please enter a valid integer for board size!"

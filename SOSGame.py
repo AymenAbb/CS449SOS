@@ -1,8 +1,6 @@
 # Game logic for SOS game.
 
-
 class SOSGame:
-
     EMPTY = ""
     LETTER_S = "S"
     LETTER_O = "O"
@@ -15,7 +13,6 @@ class SOSGame:
     def __init__(self, board_size=8, blue_player=None, red_player=None):
         if board_size < 3:
             raise ValueError("Board size must be at least 3")
-
         self._board_size = board_size
         self._board = [
             [self.EMPTY for _ in range(board_size)] for _ in range(board_size)
@@ -72,10 +69,8 @@ class SOSGame:
     def make_move(self, row, col, letter):
         if self._game_over:
             return False
-
         if not self._is_valid_move(row, col, letter):
             return False
-
         self._board[row][col] = letter
         self._switch_player()
         return True
@@ -98,10 +93,16 @@ class SOSGame:
 
     # Detect SOS sequences formed by placing a letter at (row, col).
     def _detect_sos(self, row, col):
-        sequences = []
         letter = self._board[row][col]
+        if letter == self.LETTER_S:
+            return self._detect_sos_from_s(row, col)
+        elif letter == self.LETTER_O:
+            return self._detect_sos_from_o(row, col)
+        return []
 
-        # All 8 directions
+    # Detect SOS sequences where S is at the start.
+    def _detect_sos_from_s(self, row, col):
+        sequences = []
         directions = [
             (0, 1),
             (0, -1),
@@ -112,46 +113,48 @@ class SOSGame:
             (-1, 1),
             (1, -1),
         ]
-
-        # Check if this S is the start of SOS
-        if letter == self.LETTER_S:
-            for dr, dc in directions:
-                r1, c1 = row + dr, col + dc
-                r2, c2 = row + 2 * dr, col + 2 * dc
-
+        
+        for dr, dc in directions:
+            r1, c1 = row + dr, col + dc
+            r2, c2 = row + 2 * dr, col + 2 * dc
+            if self._is_valid_position(r1, c1) and self._is_valid_position(r2, c2):
                 if (
-                    0 <= r1 < self._board_size
-                    and 0 <= c1 < self._board_size
-                    and 0 <= r2 < self._board_size
-                    and 0 <= c2 < self._board_size
+                    self._board[r1][c1] == self.LETTER_O
+                    and self._board[r2][c2] == self.LETTER_S
                 ):
-                    if (
-                        self._board[r1][c1] == self.LETTER_O
-                        and self._board[r2][c2] == self.LETTER_S
-                    ):
-                        sequences.append(((row, col), (r1, c1), (r2, c2)))
-
-        # Check if this O is the middle of SOS
-        elif letter == self.LETTER_O:
-            for dr, dc in directions:
-                r_before, c_before = row - dr, col - dc
-                r_after, c_after = row + dr, col + dc
-
-                if (
-                    0 <= r_before < self._board_size
-                    and 0 <= c_before < self._board_size
-                    and 0 <= r_after < self._board_size
-                    and 0 <= c_after < self._board_size
-                ):
-                    if (
-                        self._board[r_before][c_before] == self.LETTER_S
-                        and self._board[r_after][c_after] == self.LETTER_S
-                    ):
-                        sequences.append(
-                            ((r_before, c_before), (row, col), (r_after, c_after))
-                        )
-
+                    sequences.append(((row, col), (r1, c1), (r2, c2)))
         return sequences
+
+    # Detect SOS sequences where O is in the middle.
+    def _detect_sos_from_o(self, row, col):
+        sequences = []
+        directions = [
+            (0, 1),
+            (0, -1),
+            (1, 0),
+            (-1, 0),
+            (1, 1),
+            (-1, -1),
+            (-1, 1),
+            (1, -1),
+        ]
+        
+        for dr, dc in directions:
+            r_before, c_before = row - dr, col - dc
+            r_after, c_after = row + dr, col + dc
+            if self._is_valid_position(r_before, c_before) and self._is_valid_position(r_after, c_after):
+                if (
+                    self._board[r_before][c_before] == self.LETTER_S
+                    and self._board[r_after][c_after] == self.LETTER_S
+                ):
+                    sequences.append(
+                        ((r_before, c_before), (row, col), (r_after, c_after))
+                    )
+        return sequences
+
+    # Check if a position is within board boundaries.
+    def _is_valid_position(self, row, col):
+        return 0 <= row < self._board_size and 0 <= col < self._board_size
 
     # Check if board is full.
     def _is_board_full(self):
@@ -167,7 +170,6 @@ class SOSGame:
             if board_size < 3:
                 raise ValueError("Board size must be at least 3")
             self._board_size = board_size
-
         self._board = [
             [self.EMPTY for _ in range(self._board_size)]
             for _ in range(self._board_size)
@@ -178,7 +180,6 @@ class SOSGame:
         self._game_over = False
         self._winner = None
         self._sos_lines = []
-
         if blue_player is not None:
             self._blue_player = blue_player
         if red_player is not None:
@@ -198,7 +199,6 @@ class SimpleGame(SOSGame):
     def make_move(self, row, col, letter):
         if self._game_over:
             return False
-
         if not self._is_valid_move(row, col, letter):
             return False
 
@@ -217,13 +217,10 @@ class SimpleGame(SOSGame):
                 self._blue_score += len(sos_sequences)
             else:
                 self._red_score += len(sos_sequences)
-
             for seq in sos_sequences:
                 self._sos_lines.append((seq, player_before_move))
-
             self._game_over = True
             self._winner = player_before_move
-
         # Board full with no SOS - draw
         elif self._is_board_full():
             self._game_over = True
@@ -247,7 +244,6 @@ class GeneralGame(SOSGame):
     def make_move(self, row, col, letter):
         if self._game_over:
             return False
-
         if not self._is_valid_move(row, col, letter):
             return False
 
@@ -266,10 +262,8 @@ class GeneralGame(SOSGame):
                 self._blue_score += len(sos_sequences)
             else:
                 self._red_score += len(sos_sequences)
-
             for seq in sos_sequences:
                 self._sos_lines.append((seq, player_before_move))
-
             # Don't switch player - they get another turn
         else:
             self._switch_player()
@@ -277,7 +271,6 @@ class GeneralGame(SOSGame):
         # Check if board is full
         if self._is_board_full():
             self._game_over = True
-
             # Determine winner by score
             if self._blue_score > self._red_score:
                 self._winner = self.BLUE
