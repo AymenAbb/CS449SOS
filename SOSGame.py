@@ -9,6 +9,16 @@ class SOSGame:
     RED = "red"
     SIMPLE = "Simple"
     GENERAL = "General"
+    DIRECTIONS = [
+        (0, 1),
+        (0, -1),
+        (1, 0),
+        (-1, 0),
+        (1, 1),
+        (-1, -1),
+        (-1, 1),
+        (1, -1),
+    ]
 
     # Initialize game with board size and mode.
     def __init__(self, board_size=8, blue_player=None, red_player=None):
@@ -26,7 +36,7 @@ class SOSGame:
         self._sos_lines = []
         self._blue_player = blue_player
         self._red_player = red_player
-        self._move_history = []  # NEW: Track move history for recording
+        self._move_history = []
 
     @property
     def board_size(self):
@@ -56,7 +66,6 @@ class SOSGame:
     def sos_lines(self):
         return self._sos_lines
 
-    # NEW: Get move history
     @property
     def move_history(self):
         return self._move_history
@@ -110,18 +119,7 @@ class SOSGame:
     # Detect SOS sequences where S is at the start.
     def _detect_sos_from_s(self, row, col):
         sequences = []
-        directions = [
-            (0, 1),
-            (0, -1),
-            (1, 0),
-            (-1, 0),
-            (1, 1),
-            (-1, -1),
-            (-1, 1),
-            (1, -1),
-        ]
-
-        for dr, dc in directions:
+        for dr, dc in self.DIRECTIONS:
             r1, c1 = row + dr, col + dc
             r2, c2 = row + 2 * dr, col + 2 * dc
             if self._is_valid_position(r1, c1) and self._is_valid_position(r2, c2):
@@ -135,18 +133,7 @@ class SOSGame:
     # Detect SOS sequences where O is in the middle.
     def _detect_sos_from_o(self, row, col):
         sequences = []
-        directions = [
-            (0, 1),
-            (0, -1),
-            (1, 0),
-            (-1, 0),
-            (1, 1),
-            (-1, -1),
-            (-1, 1),
-            (1, -1),
-        ]
-
-        for dr, dc in directions:
+        for dr, dc in self.DIRECTIONS:
             r_before, c_before = row - dr, col - dc
             r_after, c_after = row + dr, col + dc
             if self._is_valid_position(r_before, c_before) and self._is_valid_position(
@@ -189,7 +176,7 @@ class SOSGame:
         self._game_over = False
         self._winner = None
         self._sos_lines = []
-        self._move_history = []  # NEW: Clear move history
+        self._move_history = []
         if blue_player is not None:
             self._blue_player = blue_player
         if red_player is not None:
@@ -218,7 +205,6 @@ class SimpleGame(SOSGame):
         # Place the letter
         self._board[row][col] = letter
 
-        # NEW: Record move in history
         self._move_history.append(
             {"row": row, "col": col, "letter": letter, "player": player_before_move}
         )
@@ -268,7 +254,6 @@ class GeneralGame(SOSGame):
         # Place the letter
         self._board[row][col] = letter
 
-        # NEW: Record move in history
         self._move_history.append(
             {"row": row, "col": col, "letter": letter, "player": player_before_move}
         )

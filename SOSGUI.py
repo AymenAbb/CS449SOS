@@ -101,7 +101,7 @@ class SOSGUI:
         score_label = tk.Label(frame, text="Score: 0", font=("Arial", 10))
         score_label.pack(pady=(10, 0))
 
-        # NEW: Add Replay button to red player frame
+        # Add Replay button to red player frame
         if color == "red":
             tk.Button(
                 frame, text="Replay", command=self._start_replay, font=("Arial", 10)
@@ -365,7 +365,7 @@ class SOSGUI:
                 "Invalid Input", "Please enter a valid integer for board size!"
             )
 
-    # NEW: Start replay from file.
+    # Start replay from file.
     def _start_replay(self):
         filepath = filedialog.askopenfilename(
             title="Select Recording to Replay",
@@ -419,7 +419,7 @@ class SOSGUI:
         except Exception as e:
             messagebox.showerror("Replay Error", f"Failed to load recording:\n{str(e)}")
 
-    # NEW: Replay next move in sequence.
+    # Replay next move in sequence.
     def _replay_next_move(self):
         if not self.replay_mode:
             return

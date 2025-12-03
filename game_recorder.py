@@ -4,9 +4,8 @@ from datetime import datetime
 import os
 
 
+# Handles recording game sessions to file.
 class GameRecorder:
-    """Handles recording game sessions to file."""
-
     def __init__(self):
         self._recording = False
         self._game_data = None
