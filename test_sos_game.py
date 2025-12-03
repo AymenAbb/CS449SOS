@@ -1,4 +1,7 @@
 import unittest
+import os
+from game_recorder import GameRecorder
+from game_replayer import GameReplayer
 from SOSGame import SOSGame, SimpleGame, GeneralGame
 from player import Player, HumanPlayer, ComputerPlayer
 
@@ -273,6 +276,132 @@ class TestUserStory8_ComputerOpponent(unittest.TestCase):
 
         move = human.get_move(game)
         self.assertIsNone(move)
+
+
+class TestUserStory9_RecordReplay(unittest.TestCase):
+    def setUp(self):
+        self.recorder = GameRecorder()
+        self.replayer = GameReplayer()
+        self.recorded_file = None
+
+    def tearDown(self):
+        if os.path.exists("recordings"):
+            for file in os.listdir("recordings"):
+                if file.startswith("game_"):
+                    os.remove(os.path.join("recordings", file))
+
+    # Helper to create a test recording file using GameRecorder
+    def _create_test_recording(self):
+        self.recorder.start_recording(3, "Simple", "Human", "Computer")
+        self.recorder.record_move(0, 0, "S", "blue")
+        self.recorder.record_move(0, 1, "O", "red")
+        self.recorder.record_move(0, 2, "S", "blue")
+        self.recorder.record_final_state("blue", 1, 0)
+        self.recorded_file = self.recorder.save_recording()
+        return self.recorded_file
+
+    # AC 9.1: Player can enable recording before starting a game
+    def test_ac_9_1_start_recording(self):
+        self.assertFalse(self.recorder.is_recording)
+        self.recorder.start_recording(8, "Simple", "Human", "Computer")
+        self.assertTrue(self.recorder.is_recording)
+
+    # AC 9.2: All moves are recorded during gameplay
+    def test_ac_9_2_record_moves(self):
+        self.recorder.start_recording(3, "Simple", "Human", "Human")
+        self.recorder.record_move(0, 0, "S", "blue")
+        self.recorder.record_move(0, 1, "O", "red")
+
+        self.assertEqual(len(self.recorder._game_data["moves"]), 2)
+        self.assertEqual(self.recorder._game_data["moves"][0]["letter"], "S")
+        self.assertEqual(self.recorder._game_data["moves"][1]["letter"], "O")
+
+    # AC 9.3: Recording is saved to file when game ends
+    def test_ac_9_3_save_recording_to_file(self):
+        self.recorder.start_recording(3, "Simple", "Human", "Human")
+        self.recorder.record_move(0, 0, "S", "blue")
+        self.recorder.record_final_state("blue", 1, 0)
+
+        filepath = self.recorder.save_recording()
+
+        self.assertIsNotNone(filepath)
+        self.assertTrue(os.path.exists(filepath))
+        self.assertFalse(self.recorder.is_recording)
+
+    # AC 9.4: Recording file contains all game data in correct format
+    def test_ac_9_4_recording_file_format(self):
+        filepath = self._create_test_recording()
+        self.replayer.load_game(filepath)
+
+        config = self.replayer.get_game_config()
+        self.assertEqual(config["board_size"], 3)
+        self.assertEqual(config["game_mode"], "Simple")
+        self.assertEqual(config["blue_player_type"], "Human")
+        self.assertEqual(config["red_player_type"], "Computer")
+        self.assertEqual(self.replayer.get_total_moves(), 3)
+        self.assertEqual(self.replayer.get_final_state()["winner"], "blue")
+
+    # AC 9.5: Can load a recording file for replay
+    def test_ac_9_5_load_recording_for_replay(self):
+        filepath = self._create_test_recording()
+        self.replayer.load_game(filepath)
+
+        config = self.replayer.get_game_config()
+        self.assertEqual(config["board_size"], 3)
+        self.assertEqual(config["game_mode"], "Simple")
+
+    # AC 9.6: Moves are replayed in correct sequence
+    def test_ac_9_6_replay_moves_in_sequence(self):
+        filepath = self._create_test_recording()
+        self.replayer.load_game(filepath)
+
+        move1 = self.replayer.get_next_move()
+        self.assertEqual(move1["row"], 0)
+        self.assertEqual(move1["col"], 0)
+        self.assertEqual(move1["player"], "blue")
+
+        move2 = self.replayer.get_next_move()
+        self.assertEqual(move2["row"], 0)
+        self.assertEqual(move2["col"], 1)
+        self.assertEqual(move2["player"], "red")
+
+    # AC 9.7: Replay tracks current and total moves
+    def test_ac_9_7_replay_tracks_progress(self):
+        filepath = self._create_test_recording()
+        self.replayer.load_game(filepath)
+
+        self.assertEqual(self.replayer.get_total_moves(), 3)
+        self.assertEqual(self.replayer.get_current_move_index(), 0)
+
+        self.replayer.get_next_move()
+        self.assertEqual(self.replayer.get_current_move_index(), 1)
+
+    # AC 9.8: Replay correctly detects when all moves are played
+    def test_ac_9_8_replay_detects_end(self):
+        filepath = self._create_test_recording()
+        self.replayer.load_game(filepath)
+
+        self.assertTrue(self.replayer.has_next_move())
+
+        while self.replayer.has_next_move():
+            self.replayer.get_next_move()
+
+        self.assertFalse(self.replayer.has_next_move())
+
+    # AC 9.9: Replay shows final game state
+    def test_ac_9_9_replay_shows_final_state(self):
+        filepath = self._create_test_recording()
+        self.replayer.load_game(filepath)
+
+        final_state = self.replayer.get_final_state()
+        self.assertEqual(final_state["winner"], "blue")
+        self.assertEqual(final_state["blue_score"], 1)
+        self.assertEqual(final_state["red_score"], 0)
+
+    # AC 9.10: Invalid recording files are handled
+    def test_ac_9_10_invalid_file_handling(self):
+        with self.assertRaises(FileNotFoundError):
+            self.replayer.load_game("nonexistent_file.json")
 
 
 if __name__ == "__main__":
