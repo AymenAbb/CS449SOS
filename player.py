@@ -1,5 +1,4 @@
-# Player class hierarchy for computer opponent.
-
+# Player class hierarchy for computer opponent
 import random
 from abc import ABC, abstractmethod
 
@@ -30,27 +29,14 @@ class ComputerPlayer(Player):
         super().__init__(color)
 
     def get_move(self, game):
-        move = self._find_winning_move(game)
+        # Try to find a winning/blocking SOS move first
+        move = self._find_sos_move(game)
         if move:
             return move
-
-        move = self._find_blocking_move(game)
-        if move:
-            return move
-
         return self._random_move(game)
 
-    def _find_winning_move(self, game):
-        for row in range(game.board_size):
-            for col in range(game.board_size):
-                if game.get_cell(row, col) == game.EMPTY:
-                    if self._creates_sos(game, row, col, "S"):
-                        return (row, col, "S")
-                    if self._creates_sos(game, row, col, "O"):
-                        return (row, col, "O")
-        return None
-
-    def _find_blocking_move(self, game):
+    # Find any move that creates an SOS.
+    def _find_sos_move(self, game):
         for row in range(game.board_size):
             for col in range(game.board_size):
                 if game.get_cell(row, col) == game.EMPTY:
@@ -73,7 +59,6 @@ class ComputerPlayer(Player):
             for col in range(game.board_size):
                 if game.get_cell(row, col) == game.EMPTY:
                     valid_moves.append((row, col))
-
         if valid_moves:
             row, col = random.choice(valid_moves)
             letter = random.choice(["S", "O"])
