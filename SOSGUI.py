@@ -1,8 +1,9 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 from SOSGame import SOSGame, SimpleGame, GeneralGame
 from player import HumanPlayer, ComputerPlayer
 from game_recorder import GameRecorder
+from game_replayer import GameReplayer
 
 
 class SOSGUI:
@@ -19,9 +20,12 @@ class SOSGUI:
         self.blue_player_type = tk.StringVar(value="Human")
         self.red_player_type = tk.StringVar(value="Human")
 
-        # NEW: Recording
+        # Recording and replay
         self.record_var = tk.BooleanVar(value=False)
         self.recorder = GameRecorder()
+        self.replayer = GameReplayer()
+        self.replay_mode = False
+        self.replay_speed = 1000  # milliseconds between moves
 
         self._create_widgets()
         self._create_board()
@@ -97,6 +101,12 @@ class SOSGUI:
         score_label = tk.Label(frame, text="Score: 0", font=("Arial", 10))
         score_label.pack(pady=(10, 0))
 
+        # NEW: Add Replay button to red player frame
+        if color == "red":
+            tk.Button(
+                frame, text="Replay", command=self._start_replay, font=("Arial", 10)
+            ).pack(pady=(10, 0))
+
         return score_label
 
     # Create bottom frame with turn label and buttons.
@@ -104,7 +114,7 @@ class SOSGUI:
         bottom_frame = tk.Frame(self.root)
         bottom_frame.pack(pady=10)
 
-        # NEW: Record game checkbox
+        # Record game checkbox
         tk.Checkbutton(bottom_frame, text="Record game", variable=self.record_var).pack(
             side=tk.LEFT, padx=10
         )
@@ -122,9 +132,9 @@ class SOSGUI:
             bottom_frame, text="New Game", command=self._new_game, font=("Arial", 11)
         ).pack(side=tk.LEFT)
 
-    # Left click
+    # Handle cell click during normal gameplay.
     def _cell_clicked(self, row, col):
-        if self.game.game_over:
+        if self.game.game_over or self.replay_mode:
             return
 
         player = self.game.get_current_player_object()
@@ -142,7 +152,7 @@ class SOSGUI:
 
         # Attempt to make the move
         if self.game.make_move(row, col, letter):
-            # NEW: Record move if recording is enabled
+            # Record move if recording is enabled
             if self.record_var.get() and self.recorder.is_recording:
                 self.recorder.record_move(row, col, letter, player_making_move)
 
@@ -168,12 +178,15 @@ class SOSGUI:
                 messagebox.showwarning("Invalid Move", "This cell is already occupied!")
 
     def _check_computer_turn(self):
-        if not self.game.game_over:
+        if not self.game.game_over and not self.replay_mode:
             player = self.game.get_current_player_object()
             if isinstance(player, ComputerPlayer):
                 self.root.after(500, self._make_computer_move)
 
     def _make_computer_move(self):
+        if self.replay_mode:
+            return
+
         player = self.game.get_current_player_object()
         if isinstance(player, ComputerPlayer):
             move = player.get_move(self.game)
@@ -183,7 +196,7 @@ class SOSGUI:
                 player_making_move = self.game.current_player
 
                 if self.game.make_move(row, col, letter):
-                    # NEW: Record move if recording is enabled
+                    # Record move if recording is enabled
                     if self.record_var.get() and self.recorder.is_recording:
                         self.recorder.record_move(row, col, letter, player_making_move)
 
@@ -235,7 +248,7 @@ class SOSGUI:
 
     # Show game over message
     def _show_game_over(self):
-        # NEW: Save recording if enabled
+        # Save recording if enabled
         if self.record_var.get() and self.recorder.is_recording:
             self.recorder.record_final_state(
                 self.game.winner, self.game.blue_score, self.game.red_score
@@ -296,6 +309,9 @@ class SOSGUI:
     # Start new game with current settings.
     def _new_game(self):
         try:
+            # Stop replay mode if active
+            self.replay_mode = False
+
             board_size = int(self.board_size_var.get())
             if board_size < 3:
                 messagebox.showerror(
@@ -330,7 +346,7 @@ class SOSGUI:
                     red_player=red_player,
                 )
 
-            # NEW: Start recording if checkbox is checked
+            # Start recording if checkbox is checked
             if self.record_var.get():
                 self.recorder.start_recording(
                     board_size,
@@ -348,3 +364,108 @@ class SOSGUI:
             messagebox.showerror(
                 "Invalid Input", "Please enter a valid integer for board size!"
             )
+
+    # NEW: Start replay from file.
+    def _start_replay(self):
+        filepath = filedialog.askopenfilename(
+            title="Select Recording to Replay",
+            initialdir="recordings",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+        )
+
+        if not filepath:
+            return
+
+        try:
+            # Load the recording
+            self.replayer.load_game(filepath)
+            config = self.replayer.get_game_config()
+
+            # Set up game with recording configuration
+            self.board_size_var.set(str(config["board_size"]))
+            self.mode.set(config["game_mode"])
+            self.blue_player_type.set(config["blue_player_type"])
+            self.red_player_type.set(config["red_player_type"])
+
+            # Disable recording during replay
+            self.record_var.set(False)
+
+            # Create game
+            blue_player = HumanPlayer("blue")
+            red_player = HumanPlayer("red")
+
+            if config["game_mode"] == "Simple":
+                self.game = SimpleGame(
+                    board_size=config["board_size"],
+                    blue_player=blue_player,
+                    red_player=red_player,
+                )
+            else:
+                self.game = GeneralGame(
+                    board_size=config["board_size"],
+                    blue_player=blue_player,
+                    red_player=red_player,
+                )
+
+            # Reset board
+            self._create_board()
+            self.turn_label.config(text="Replay Mode")
+            self._update_scores()
+
+            # Start replay mode
+            self.replay_mode = True
+            self._replay_next_move()
+
+        except Exception as e:
+            messagebox.showerror("Replay Error", f"Failed to load recording:\n{str(e)}")
+
+    # NEW: Replay next move in sequence.
+    def _replay_next_move(self):
+        if not self.replay_mode:
+            return
+
+        if not self.replayer.has_next_move():
+            # Replay finished
+            self.replay_mode = False
+            self.turn_label.config(text="Replay Complete")
+
+            # Show final state
+            final_state = self.replayer.get_final_state()
+            if final_state["winner"] is None:
+                message = "Replay Complete! It was a draw!"
+            elif final_state["winner"] == SOSGame.BLUE:
+                message = (
+                    f"Replay Complete! Blue won with {final_state['blue_score']} SOS!"
+                )
+            else:
+                message = (
+                    f"Replay Complete! Red won with {final_state['red_score']} SOS!"
+                )
+
+            messagebox.showinfo("Replay Complete", message)
+            return
+
+        # Get next move
+        move = self.replayer.get_next_move()
+        row = move["row"]
+        col = move["col"]
+        letter = move["letter"]
+        player = move["player"]
+
+        # Execute move
+        self.game.make_move(row, col, letter)
+
+        # Update UI
+        color = "blue" if player == SOSGame.BLUE else "red"
+        self.cell_buttons[row][col].config(
+            text=letter, fg=color, disabledforeground=color, state="disabled"
+        )
+
+        self._draw_sos_lines()
+        self._update_scores()
+        self.turn_label.config(
+            text=f"Replay Mode - Move {self.replayer.get_current_move_index()}/{self.replayer.get_total_moves()}"
+        )
+
+        # Schedule next move
+        self.root.after(self.replay_speed, self._replay_next_move)
