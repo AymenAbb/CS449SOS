@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 from SOSGame import SOSGame, SimpleGame, GeneralGame
 from player import HumanPlayer, ComputerPlayer
+from game_recorder import GameRecorder
 
 
 class SOSGUI:
@@ -17,6 +18,10 @@ class SOSGUI:
         self.mode = tk.StringVar(value="Simple")
         self.blue_player_type = tk.StringVar(value="Human")
         self.red_player_type = tk.StringVar(value="Human")
+
+        # NEW: Recording
+        self.record_var = tk.BooleanVar(value=False)
+        self.recorder = GameRecorder()
 
         self._create_widgets()
         self._create_board()
@@ -70,13 +75,13 @@ class SOSGUI:
         )
 
     # Create a player frame with letter and player type controls.
-    def _create_player_frame(self, parent, label_text, color, letter_var, player_type_var):
+    def _create_player_frame(
+        self, parent, label_text, color, letter_var, player_type_var
+    ):
         frame = tk.Frame(parent)
         frame.pack(side=tk.LEFT, padx=20)
 
-        tk.Label(
-            frame, text=label_text, fg=color, font=("Arial", 12, "bold")
-        ).pack()
+        tk.Label(frame, text=label_text, fg=color, font=("Arial", 12, "bold")).pack()
 
         tk.Radiobutton(frame, text="S", variable=letter_var, value="S").pack()
         tk.Radiobutton(frame, text="O", variable=letter_var, value="O").pack()
@@ -98,6 +103,11 @@ class SOSGUI:
     def _create_bottom_frame(self):
         bottom_frame = tk.Frame(self.root)
         bottom_frame.pack(pady=10)
+
+        # NEW: Record game checkbox
+        tk.Checkbutton(bottom_frame, text="Record game", variable=self.record_var).pack(
+            side=tk.LEFT, padx=10
+        )
 
         # Current turn label
         self.turn_label = tk.Label(
@@ -132,6 +142,10 @@ class SOSGUI:
 
         # Attempt to make the move
         if self.game.make_move(row, col, letter):
+            # NEW: Record move if recording is enabled
+            if self.record_var.get() and self.recorder.is_recording:
+                self.recorder.record_move(row, col, letter, player_making_move)
+
             # Set button text in the color of the player who MADE the move
             self.cell_buttons[row][col].config(
                 text=letter, fg=color, disabledforeground=color, state="disabled"
@@ -166,8 +180,13 @@ class SOSGUI:
             if move:
                 row, col, letter = move
                 color = "blue" if self.game.current_player == SOSGame.BLUE else "red"
+                player_making_move = self.game.current_player
 
                 if self.game.make_move(row, col, letter):
+                    # NEW: Record move if recording is enabled
+                    if self.record_var.get() and self.recorder.is_recording:
+                        self.recorder.record_move(row, col, letter, player_making_move)
+
                     self.cell_buttons[row][col].config(
                         text=letter,
                         fg=color,
@@ -216,6 +235,15 @@ class SOSGUI:
 
     # Show game over message
     def _show_game_over(self):
+        # NEW: Save recording if enabled
+        if self.record_var.get() and self.recorder.is_recording:
+            self.recorder.record_final_state(
+                self.game.winner, self.game.blue_score, self.game.red_score
+            )
+            filepath = self.recorder.save_recording()
+            if filepath:
+                messagebox.showinfo("Recording Saved", f"Game recorded to:\n{filepath}")
+
         if self.game.winner is None:
             message = "Game Over! It's a draw!"
             self.turn_label.config(text="Game Over: Draw")
@@ -300,6 +328,15 @@ class SOSGUI:
                     board_size=board_size,
                     blue_player=blue_player,
                     red_player=red_player,
+                )
+
+            # NEW: Start recording if checkbox is checked
+            if self.record_var.get():
+                self.recorder.start_recording(
+                    board_size,
+                    game_mode,
+                    self.blue_player_type.get(),
+                    self.red_player_type.get(),
                 )
 
             self._create_board()
