@@ -5,6 +5,12 @@ from player import HumanPlayer, ComputerPlayer
 from game_recorder import GameRecorder
 from game_replayer import GameReplayer
 
+# UI configuration constants
+COMPUTER_MOVE_DELAY_MS = 250
+REPLAY_SPEED_MS = 500
+MIN_CELL_SIZE = 40
+BOARD_PIXEL_BUDGET = 400
+
 
 class SOSGUI:
     def __init__(self, root):
@@ -25,7 +31,7 @@ class SOSGUI:
         self.recorder = GameRecorder()
         self.replayer = GameReplayer()
         self.replay_mode = False
-        self.replay_speed = 1000  # milliseconds between moves
+        self.replay_speed = REPLAY_SPEED_MS
 
         self._create_widgets()
         self._create_board()
@@ -181,7 +187,7 @@ class SOSGUI:
         if not self.game.game_over and not self.replay_mode:
             player = self.game.get_current_player_object()
             if isinstance(player, ComputerPlayer):
-                self.root.after(500, self._make_computer_move)
+                self.root.after(COMPUTER_MOVE_DELAY_MS, self._make_computer_move)
 
     def _make_computer_move(self):
         if self.replay_mode:
@@ -275,7 +281,7 @@ class SOSGUI:
             widget.destroy()
 
         size = self.game.board_size
-        self.cell_size = max(40, 400 // size)
+        self.cell_size = max(MIN_CELL_SIZE, BOARD_PIXEL_BUDGET // size)
 
         # Create canvas for drawing lines
         canvas_size = size * self.cell_size
