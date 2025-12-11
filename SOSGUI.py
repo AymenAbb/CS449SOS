@@ -4,6 +4,7 @@ from SOSGame import SOSGame, SimpleGame, GeneralGame
 from player import HumanPlayer, ComputerPlayer
 from game_recorder import GameRecorder
 from game_replayer import GameReplayer
+from llm_player import LLMPlayer
 
 # UI configuration constants
 COMPUTER_MOVE_DELAY_MS = 250
@@ -102,6 +103,7 @@ class SOSGUI:
         tk.Radiobutton(
             frame, text="Computer", variable=player_type_var, value="Computer"
         ).pack()
+        tk.Radiobutton(frame, text="LLM", variable=player_type_var, value="LLM").pack()
 
         # Score label
         score_label = tk.Label(frame, text="Score: 0", font=("Arial", 10))
@@ -144,7 +146,7 @@ class SOSGUI:
             return
 
         player = self.game.get_current_player_object()
-        if isinstance(player, ComputerPlayer):
+        if isinstance(player, (ComputerPlayer, LLMPlayer)):
             return
 
         # Capture the player BEFORE the move
@@ -186,15 +188,14 @@ class SOSGUI:
     def _check_computer_turn(self):
         if not self.game.game_over and not self.replay_mode:
             player = self.game.get_current_player_object()
-            if isinstance(player, ComputerPlayer):
+            if isinstance(player, (ComputerPlayer, LLMPlayer)):
                 self.root.after(COMPUTER_MOVE_DELAY_MS, self._make_computer_move)
 
     def _make_computer_move(self):
         if self.replay_mode:
             return
-
         player = self.game.get_current_player_object()
-        if isinstance(player, ComputerPlayer):
+        if isinstance(player, (ComputerPlayer, LLMPlayer)):
             move = player.get_move(self.game)
             if move:
                 row, col, letter = move
@@ -327,16 +328,19 @@ class SOSGUI:
 
             game_mode = self.mode.get()
 
-            blue_player = (
-                HumanPlayer("blue")
-                if self.blue_player_type.get() == "Human"
-                else ComputerPlayer("blue")
-            )
-            red_player = (
-                HumanPlayer("red")
-                if self.red_player_type.get() == "Human"
-                else ComputerPlayer("red")
-            )
+            if self.blue_player_type.get() == "Human":
+                blue_player = HumanPlayer("blue")
+            elif self.blue_player_type.get() == "LLM":
+                blue_player = LLMPlayer("blue")
+            else:
+                blue_player = ComputerPlayer("blue")
+
+            if self.red_player_type.get() == "Human":
+                red_player = HumanPlayer("red")
+            elif self.red_player_type.get() == "LLM":
+                red_player = LLMPlayer("red")
+            else:
+                red_player = ComputerPlayer("red")
 
             # Create appropriate game subclass based on mode
             if game_mode == "Simple":
