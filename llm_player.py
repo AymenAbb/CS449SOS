@@ -15,7 +15,7 @@ class LLMPlayer(Player):
         if self.api_key:
             genai.configure(api_key=self.api_key)
             # Use gemini-1.5-flash for speed
-            self.model = genai.GenerativeModel("models/gemini-2.5-flash-lite")
+            self.model = genai.GenerativeModel("models/gemini-2.5-flash")
         else:
             self.model = None
             print("Warning: GEMINI_API_KEY not set. LLMPlayer will use random moves.")
@@ -25,8 +25,23 @@ class LLMPlayer(Player):
             raise RuntimeError("GEMINI_API_KEY not set")
 
         try:
+            # Build the prompt first
             prompt = self._build_prompt(game)
-            response = self.model.generate_content(prompt)
+
+            # DEBUG: Print what we're showing the LLM
+            print(f"\n{'='*60}")
+            print(f"[DEBUG {self.color}] Board shown to LLM:")
+            print(self._format_board(game))
+            print(f"{'='*60}\n")
+
+            # Send to model with temperature=0
+            response = self.model.generate_content(
+                prompt,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.0,
+                ),
+            )
+
             content = response.text.strip()
 
             # Print what the LLM is thinking
