@@ -1,143 +1,98 @@
-# LLM-powered opponent using Google Gemini.
-import os
+# LLM-powered opponent using local LM Studio server
+import requests
 import re
-import google.generativeai as genai
 from player import Player
-import random
 
 
 class LLMPlayer(Player):
     def __init__(self, color):
         super().__init__(color)
-        # Get API key from environment variable
-        self.api_key = os.getenv("GEMINI_API_KEY")
-
-        if self.api_key:
-            genai.configure(api_key=self.api_key)
-            # Use gemini-1.5-flash for speed
-            self.model = genai.GenerativeModel("models/gemini-2.5-flash")
-        else:
-            self.model = None
-            print("Warning: GEMINI_API_KEY not set. LLMPlayer will use random moves.")
+        # LM Studio local server URL
+        self.api_url = "http://localhost:1234/v1/chat/completions"
+        self.model = "local-model"
 
     def get_move(self, game):
-        if not self.model:
-            raise RuntimeError("GEMINI_API_KEY not set")
+        max_retries = 5
+        current_prompt = self._build_prompt(game)
 
-        try:
-            # Build the prompt first
-            prompt = self._build_prompt(game)
+        print(f"\n[LLM {self.color}] Thinking locally...")
 
-            # DEBUG: Print what we're showing the LLM
-            print(f"\n{'='*60}")
-            print(f"[DEBUG {self.color}] Board shown to LLM:")
-            print(self._format_board(game))
-            print(f"{'='*60}\n")
-
-            # Send to model with temperature=0
-            response = self.model.generate_content(
-                prompt,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=0.0,
-                ),
-            )
-
-            content = response.text.strip()
-
-            # Print what the LLM is thinking
-            print(f"\n[LLM {self.color}] Response: {content}\n")
-
-            move = self._parse_move(content, game)
-            print(f"[LLM {self.color}] Parsed move: {move}")
-
-            if move:
-                row, col, letter = move
-                # Debug: Check what's at that position
-                current = game.get_cell(row, col)
-                print(
-                    f"[LLM {self.color}] Cell at [{row}][{col}] contains: '{current}'"
+        for attempt in range(max_retries):
+            try:
+                response = requests.post(
+                    self.api_url,
+                    json={
+                        "model": self.model,
+                        "messages": [
+                            {
+                                "role": "system",
+                                "content": "You are a master SOS player. Return ONLY the move: row,col,letter. No explanation.",
+                            },
+                            {"role": "user", "content": current_prompt},
+                        ],
+                        "temperature": 0.0,
+                        "max_tokens": 50,
+                    },
+                    timeout=30,
                 )
-                print(f"[LLM {self.color}] game.EMPTY = '{game.EMPTY}'")
-                print(f"[LLM {self.color}] Is empty? {current == game.EMPTY}")
-                print(f"[LLM {self.color}] Is valid? {self._is_valid_move(move, game)}")
 
-            if move and self._is_valid_move(move, game):
-                print(
-                    f"[LLM {self.color}] Playing: row={move[0]}, col={move[1]}, letter={move[2]}"
-                )
-                return move
-            else:
-                raise ValueError(f"LLM returned invalid move: {content}")
+                if response.status_code != 200:
+                    print(f"[LLM {self.color}] Server Error: {response.text}")
+                    continue
 
-        except Exception as e:
-            # Show errors
-            print(f"\n{'='*60}")
-            print(f"[LLM {self.color}] FAILED!")
-            print(f"Error: {e}")
-            print(f"{'='*60}\n")
-            raise
+                content = response.json()["choices"][0]["message"]["content"].strip()
+                print(f"[LLM {self.color}] Response (Attempt {attempt+1}): {content}")
+
+                move = self._parse_move(content, game)
+
+                # VALIDATION
+                if move:
+                    if self._is_valid_move(move, game):
+                        row, col, letter = move
+                        print(
+                            f"[LLM {self.color}] Playing: row={row}, col={col}, letter={letter}"
+                        )
+                        return move
+                    else:
+                        print(
+                            f"[LLM {self.color}] Invalid logic: {content} (Cell occupied or out of bounds)"
+                        )
+                        # Add error to prompt so it learns
+                        current_prompt += f"\n\nERROR: Move {content} is invalid! Cell is occupied or out of bounds. Choose an EMPTY '.' cell."
+                else:
+                    print(f"[LLM {self.color}] Format error: {content}")
+                    current_prompt += f"\n\nERROR: Invalid format. Output ONLY: row,col,letter (e.g. 2,3,S)"
+
+            except Exception as e:
+                print(f"[LLM {self.color}] Connection Error: {e}")
+
+        # Failed 11 times
+        raise RuntimeError(
+            f"LLM failed to make a valid move after {max_retries} attempts!"
+        )
 
     def _build_prompt(self, game):
-        # Prompt
         board_str = self._format_board(game)
 
-        # Analyze board
-        empty_count = sum(
-            1
-            for r in range(game.board_size)
-            for c in range(game.board_size)
-            if game.get_cell(r, c) == game.EMPTY
-        )
-        game_phase = (
-            "early"
-            if empty_count > game.board_size * game.board_size * 0.7
-            else (
-                "mid"
-                if empty_count > game.board_size * game.board_size * 0.3
-                else "late"
-            )
-        )
+        prompt = f"""You are a master SOS player. You are {self.color}.
+Your goal is to BEAT the opponent by forming 'S-O-S' sequences.
 
-        prompt = f"""You are an expert SOS player. You are {self.color} player.
+CURRENT BOARD:
+{board_str}
 
-        GAME RULES:
-        - Goal: Create S-O-S sequences in straight lines (horizontal, vertical, diagonal)
-        - {'Simple mode: First player to make an SOS wins immediately' if game.game_mode == 'Simple' else 'General mode: Make the most SOS sequences by game end'}
+CRITICAL INSTRUCTIONS:
+1. IMMEDIATE WIN: Look for 'S-O-.' or '. -O-S' or 'S-.-S' (horizontally, vertically, diagonal). If found, FILL IT to score!
+2. BLOCK OPPONENT: If the opponent has 2/3 of an SOS (e.g. 'S-O-.'), you MUST block it!
+3. DON'T SET UP LOSES: Do NOT place an 'O' next to an 'S' unless you are completing a sequence.
+4. AGGRESSIVE PLAY: If no immediate win, place 'S' far away from other letters to start new threats.
 
-        CURRENT STATE:
-        Board: {game.board_size}x{game.board_size} | Phase: {game_phase} game
-        Scores: Blue={game.blue_score}, Red={game.red_score}
-        You are: {self.color}
+Output ONLY the move: row,col,letter
+Example: 1,2,S
 
-        BOARD (. = empty):
-        {board_str}
-
-        WINNING STRATEGY:
-        1. ATTACK: Scan for 2-letter partial sequences (S-O or O-S) where you can complete the SOS
-        - Check all 8 directions from every cell
-        - Example: If you see "S O .", place S at position 2
-   
-        2. DEFEND: Block opponent's winning moves
-        - Look for their partial sequences
-        - Place your letter to prevent their completion
-   
-        3. SETUP: Create multiple threats
-        - Place letters that create future SOS opportunities
-        - In middle game, position Os between Ss for multi-directional scoring
-
-        4. PATTERN RECOGNITION:
-        - "S . S" → place O in middle for instant SOS
-        - ". O S" or "S O ." → place S to complete
-        - Diagonal patterns are harder to spot - check carefully!
-
-        RESPONSE: Output ONLY: row,col,letter
-        Example: 2,3,O
-
-        Analyze the board carefully. Your move:"""
+Analyze every row, column, and diagonal. Your move:"""
         return prompt
 
     def _format_board(self, game):
-        # Format board as text grid with coordinates.
         lines = []
         lines.append("   " + " ".join(str(i) for i in range(game.board_size)))
 
@@ -154,8 +109,10 @@ class LLMPlayer(Player):
 
     def _parse_move(self, response, game):
         # Parse LLM response into (row, col, letter) tuple
-        match = re.search(r"(\d+)\s*,\s*(\d+)\s*,\s*([SOso])", response)
-        if match:
+        # Extract pattern like "2,3,S" or "2, 3, S"
+        matches = list(re.finditer(r"(\d+)\s*,\s*(\d+)\s*,\s*([SOso])", response))
+        if matches:
+            match = matches[-1]  # Take the last one found
             row = int(match.group(1))
             col = int(match.group(2))
             letter = match.group(3).upper()
@@ -167,31 +124,13 @@ class LLMPlayer(Player):
             return False
         row, col, letter = move
 
-        # Check bounds
         if not (0 <= row < game.board_size and 0 <= col < game.board_size):
             return False
 
-        # Check cell is empty
         if game.get_cell(row, col) != game.EMPTY:
             return False
 
-        # Check letter is valid
         if letter not in ["S", "O"]:
             return False
 
         return True
-
-    """
-    def _random_move(self, game):
-        valid_moves = []
-        for row in range(game.board_size):
-            for col in range(game.board_size):
-                if game.get_cell(row, col) == game.EMPTY:
-                    valid_moves.append((row, col))
-
-        if valid_moves:
-            row, col = random.choice(valid_moves)
-            letter = random.choice(["S", "O"])
-            return (row, col, letter)
-        return None
-    """

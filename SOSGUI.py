@@ -7,7 +7,7 @@ from game_replayer import GameReplayer
 from llm_player import LLMPlayer
 
 # UI configuration constants
-COMPUTER_MOVE_DELAY_MS = 5000
+COMPUTER_MOVE_DELAY_MS = 500
 REPLAY_SPEED_MS = 500
 MIN_CELL_SIZE = 40
 BOARD_PIXEL_BUDGET = 400

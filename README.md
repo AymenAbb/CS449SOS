@@ -2,5 +2,6 @@
 
 Run by:
 
-export GEMINI_API_KEY="key"
-python3 main.py 
+1. Loading any model in LM Studio
+2. Start server on port 1234
+3. Run the game!
